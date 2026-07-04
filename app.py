@@ -15,7 +15,14 @@ from pipeline.harmonize import add_shadow
 from presets.styles import STYLES
 
 
-def process(image: Image.Image, style_name: str, num_variants: int = 3):
+try:
+    import spaces
+    has_spaces = True
+except ImportError:
+    has_spaces = False
+
+
+def run_pipeline(image: Image.Image, style_name: str, num_variants: int = 3):
     if image is None:
         raise gr.Error("Please upload a product photo first.")
 
@@ -49,6 +56,15 @@ def process(image: Image.Image, style_name: str, num_variants: int = 3):
         results.append(final)
 
     return results
+
+
+if has_spaces:
+    @spaces.GPU(duration=60)
+    def process(image: Image.Image, style_name: str, num_variants: int = 3):
+        return run_pipeline(image, style_name, num_variants)
+else:
+    def process(image: Image.Image, style_name: str, num_variants: int = 3):
+        return run_pipeline(image, style_name, num_variants)
 
 
 with gr.Blocks(title="SnapStudio AI") as demo:
