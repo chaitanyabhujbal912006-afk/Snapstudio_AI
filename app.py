@@ -4,7 +4,6 @@ Wraps the full pipeline: segment -> depth/edge -> generate background ->
 composite -> harmonize -> return gallery of results.
 """
 
-import spaces  # provided by HF Spaces ZeroGPU -- lets you mark GPU-only functions
 import gradio as gr
 from PIL import Image
 
@@ -16,7 +15,6 @@ from pipeline.harmonize import add_shadow
 from presets.styles import STYLES
 
 
-@spaces.GPU(duration=60)  # requests up to 60s of free ZeroGPU time per call
 def process(image: Image.Image, style_name: str, num_variants: int = 3):
     if image is None:
         raise gr.Error("Please upload a product photo first.")
