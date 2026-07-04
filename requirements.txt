@@ -1,11 +1,9 @@
-gradio==4.44.0
+gradio==5.49.1
 torch==2.6.0
 diffusers==0.30.0
-transformers==4.44.0
+transformers==4.46.3
 accelerate
 controlnet-aux==0.0.10
-rembg==2.0.57
+rembg==2.0.68
 opencv-python-headless
-pillow
-numpy
 peft
