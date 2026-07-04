@@ -2,7 +2,9 @@
 Generates the new background/scene, conditioned on the depth map extracted
 from the original photo so perspective and spatial layout stay plausible.
 
-Uses Stable Diffusion 1.5 with LCM-LoRA for fast CPU/GPU inference.
+Runs on CPU (free HF Spaces CPU-Basic tier). LCM-LoRA is used so we only
+need ~6-8 denoising steps instead of ~25 -- this is what makes CPU
+inference actually usable in the 30-60s range instead of several minutes.
 """
 
 import torch
@@ -17,18 +19,15 @@ def _load_pipeline():
     if _pipe is not None:
         return _pipe
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    torch_dtype = torch.float16 if device == "cuda" else torch.float32
-
     controlnet = ControlNetModel.from_pretrained(
         "lllyasviel/sd-controlnet-depth",
-        torch_dtype=torch_dtype,
+        torch_dtype=torch.float32,  # float32 on CPU -- float16 is not reliably supported off-GPU
     )
 
     pipe = StableDiffusionControlNetPipeline.from_pretrained(
         "runwayml/stable-diffusion-v1-5",
         controlnet=controlnet,
-        torch_dtype=torch_dtype,
+        torch_dtype=torch.float32,
         safety_checker=None,
     )
 
@@ -36,9 +35,6 @@ def _load_pipeline():
     # makes this workable on free CPU hosting.
     pipe.load_lora_weights("latent-consistency/lcm-lora-sdv1-5")
     pipe.scheduler = LCMScheduler.from_config(pipe.scheduler.config)
-
-    if device == "cuda":
-        pipe.enable_model_cpu_offload()
 
     _pipe = pipe
     return _pipe
@@ -48,10 +44,9 @@ def generate_background(depth_map: Image.Image, prompt: str, negative_prompt: st
                          steps: int = 6, guidance_scale: float = 1.5, seed: int = None) -> Image.Image:
     pipe = _load_pipeline()
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
     generator = None
     if seed is not None:
-        generator = torch.Generator(device=device).manual_seed(seed)
+        generator = torch.Generator(device="cpu").manual_seed(seed)
 
     result = pipe(
         prompt=prompt,

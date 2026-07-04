@@ -1,9 +1,11 @@
-diffusers>=0.30.0
-transformers
+gradio==4.44.0
+torch==2.6.0
+diffusers==0.30.0
+transformers==4.44.0
 accelerate
-peft
 controlnet-aux==0.0.10
 rembg==2.0.57
 opencv-python-headless
 pillow
-numpy<2.0.0
+numpy
+peft
