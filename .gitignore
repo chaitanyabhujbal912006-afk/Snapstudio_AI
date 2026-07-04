@@ -1,0 +1,19 @@
+# Virtual environment
+venv/
+.venv/
+env/
+ENV/
+
+# Python cache / bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Keep repository settings or local tools out
+.vscode/
+.idea/
+*.log
