@@ -4,6 +4,6 @@ diffusers==0.30.0
 transformers==4.46.3
 accelerate
 controlnet-aux==0.0.10
-rembg==2.0.68
+rembg[cpu]==2.0.68
 opencv-python-headless
 peft
