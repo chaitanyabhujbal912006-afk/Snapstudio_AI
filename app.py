@@ -69,19 +69,18 @@ with gr.Blocks(title="SnapStudio AI") as demo:
             num_variants = gr.Slider(1, 4, value=3, step=1, label="Number of variants")
             generate_btn = gr.Button("Generate", variant="primary")
             gr.Markdown(
-                "_First generation may take 20-40s while the model loads. "
-                "Runs on free shared GPU quota — a short wait is normal._"
+                "_Runs on free CPU hosting -- each variant takes roughly 30-60s to generate. "
+                "Please be patient on the first run while the models download._"
             )
 
         with gr.Column():
-            output_gallery = gr.Gallery(label="Results", columns=2, value=None)
+            output_gallery = gr.Gallery(label="Results", columns=2)
 
     generate_btn.click(
         fn=process,
         inputs=[input_image, style_dropdown, num_variants],
         outputs=output_gallery,
     )
-
 
 if __name__ == "__main__":
     demo.launch()
