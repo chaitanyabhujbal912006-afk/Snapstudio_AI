@@ -1,11 +1,13 @@
 """
 Main entrypoint. This is the file Hugging Face Spaces runs.
-Wraps the full pipeline: segment -> depth/edge -> generate background ->
-composite -> harmonize -> return gallery of results.
+Multi-mode AI photo editor:
+  Tab 1 — Auto-Enhance (fast, pure image processing)
+  Tab 2 — Background Swap (Stable Diffusion + ControlNet)
 """
 
 import os
-# Limit threads to match Hugging Face CPU Space allocation and avoid host CPU context-switching deadlocks.
+# Limit threads to match Hugging Face CPU Space allocation (2 vCPU)
+# and avoid host CPU context-switching deadlocks during inference.
 os.environ["OMP_NUM_THREADS"] = "2"
 os.environ["MKL_NUM_THREADS"] = "2"
 os.environ["OPENBLAS_NUM_THREADS"] = "2"
@@ -23,6 +25,7 @@ from pipeline.depth_edges import get_depth_map
 from pipeline.generate_bg import generate_background
 from pipeline.composite import composite
 from pipeline.harmonize import add_shadow
+from pipeline.enhance import auto_enhance
 from presets.styles import STYLES
 
 
@@ -33,7 +36,13 @@ except ImportError:
     has_spaces = False
 
 
-def run_pipeline(image: Image.Image, style_name: str, num_variants: int = 3):
+def process_enhance(image: Image.Image):
+    if image is None:
+        raise gr.Error("Please upload a photo first.")
+    return auto_enhance(image)
+
+
+def _run_bg_swap(image: Image.Image, style_name: str, num_variants: int = 1):
     if image is None:
         raise gr.Error("Please upload a product photo first.")
 
@@ -45,23 +54,25 @@ def run_pipeline(image: Image.Image, style_name: str, num_variants: int = 3):
 
     # Step 2: extract depth map for structure-consistent generation (CPU)
     depth_map = get_depth_map(image)
+    # Mask depth map with soft mask so background shapes don't bleed into generation
+    depth_map = Image.composite(depth_map, Image.new("L", depth_map.size, 0), soft_mask)
 
     style = STYLES[style_name]
 
     results = []
     for i in range(num_variants):
-        # Step 3: generate the new background (GPU)
+        # Step 3: generate the new background
         background = generate_background(
             depth_map=depth_map,
             prompt=style["prompt"],
             negative_prompt=style["negative_prompt"],
-            seed=42 + i,  # different seed per variant for variety
+            seed=42 + i,
         )
 
         # Step 4: composite the untouched product back on top (CPU)
         composited = composite(cutout, soft_mask, background)
 
-        # Step 5: harmonize -- add a soft shadow so it doesn't look pasted (CPU)
+        # Step 5: add a soft shadow so it doesn't look pasted (CPU)
         final = add_shadow(composited, mask)
 
         results.append(final)
@@ -70,44 +81,51 @@ def run_pipeline(image: Image.Image, style_name: str, num_variants: int = 3):
 
 
 if has_spaces:
-    @spaces.GPU(duration=60)
-    def process(image: Image.Image, style_name: str, num_variants: int = 3):
-        return run_pipeline(image, style_name, num_variants)
+    @spaces.GPU(duration=120)
+    def process_bg_swap(image: Image.Image, style_name: str, num_variants: int = 1):
+        return _run_bg_swap(image, style_name, num_variants)
 else:
-    def process(image: Image.Image, style_name: str, num_variants: int = 3):
-        return run_pipeline(image, style_name, num_variants)
+    def process_bg_swap(image: Image.Image, style_name: str, num_variants: int = 1):
+        return _run_bg_swap(image, style_name, num_variants)
 
 
 with gr.Blocks(title="SnapStudio AI") as demo:
     gr.Markdown(
         "# SnapStudio AI\n"
-        "Upload one raw product photo. Get studio-quality shots back — "
-        "same product, new background, automatically."
+        "Pick a mode below, upload a photo, and get an AI-enhanced result back."
     )
 
-    with gr.Row():
-        with gr.Column():
-            input_image = gr.Image(type="pil", label="Upload product photo")
-            style_dropdown = gr.Dropdown(
-                choices=list(STYLES.keys()),
-                value="Studio - white sweep",
-                label="Style",
-            )
-            num_variants = gr.Slider(1, 4, value=1, step=1, label="Number of variants")
-            generate_btn = gr.Button("Generate", variant="primary")
+    with gr.Tabs():
+        with gr.Tab("✨ Auto-Enhance"):
+            gr.Markdown("_Fast (1-2 seconds) — fixes lighting, color, and sharpness automatically._")
+            with gr.Row():
+                enhance_input = gr.Image(type="pil", label="Upload photo")
+                enhance_output = gr.Image(type="pil", label="Enhanced result")
+            enhance_btn = gr.Button("Enhance", variant="primary")
+            enhance_btn.click(fn=process_enhance, inputs=[enhance_input], outputs=[enhance_output])
+
+        with gr.Tab("🖼️ Background Swap"):
             gr.Markdown(
-                "_Runs on free CPU hosting -- each variant takes roughly 1-2 minutes to generate. "
-                "Please be patient on the first run while the models download._"
+                "_Runs on free CPU hosting — each variant takes roughly 1-2 minutes. "
+                "Please be patient, especially on the first run while models download._"
             )
-
-        with gr.Column():
-            output_gallery = gr.Gallery(label="Results", columns=2)
-
-    generate_btn.click(
-        fn=process,
-        inputs=[input_image, style_dropdown, num_variants],
-        outputs=output_gallery,
-    )
+            with gr.Row():
+                with gr.Column():
+                    bg_input = gr.Image(type="pil", label="Upload photo")
+                    style_dropdown = gr.Dropdown(
+                        choices=list(STYLES.keys()),
+                        value="Studio - white sweep",
+                        label="Style",
+                    )
+                    num_variants = gr.Slider(1, 4, value=1, step=1, label="Number of variants")
+                    bg_btn = gr.Button("Generate", variant="primary")
+                with gr.Column():
+                    bg_output = gr.Gallery(label="Results", columns=2)
+            bg_btn.click(
+                fn=process_bg_swap,
+                inputs=[bg_input, style_dropdown, num_variants],
+                outputs=bg_output,
+            )
 
 if __name__ == "__main__":
     demo.launch()
