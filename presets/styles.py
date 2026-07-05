@@ -33,4 +33,25 @@ STYLES = {
         ),
         "negative_prompt": "cluttered, busy background, text, watermark, blurry, distorted, extra objects",
     },
+    "Portrait - city bokeh": {
+        "prompt": (
+            "blurred city street background at dusk, warm bokeh lights, "
+            "professional portrait photography backdrop, soft depth of field, high detail"
+        ),
+        "negative_prompt": "cluttered, extra people, text, watermark, blurry face, distorted, extra limbs",
+    },
+    "Portrait - clean studio": {
+        "prompt": (
+            "seamless soft gray studio backdrop, professional portrait lighting, "
+            "soft shadow, high-end headshot photography background"
+        ),
+        "negative_prompt": "cluttered, extra people, text, watermark, blurry face, distorted, extra limbs",
+    },
+    "Portrait - golden hour outdoor": {
+        "prompt": (
+            "outdoor golden hour background, warm sunlight, soft blurred natural scenery, "
+            "professional portrait photography backdrop, soft depth of field"
+        ),
+        "negative_prompt": "cluttered, extra people, text, watermark, blurry face, distorted, extra limbs",
+    },
 }

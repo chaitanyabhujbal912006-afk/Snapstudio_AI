@@ -2,7 +2,7 @@
 Main entrypoint. This is the file Hugging Face Spaces runs.
 Multi-mode AI photo editor:
   Tab 1 — Auto-Enhance (fast, pure image processing)
-  Tab 2 — Background Swap (Stable Diffusion + ControlNet)
+  Tab 2 — Background Swap (Stable Diffusion + ControlNet, portrait or product)
 """
 
 import os
@@ -42,19 +42,20 @@ def process_enhance(image: Image.Image):
     return auto_enhance(image)
 
 
-def _run_bg_swap(image: Image.Image, style_name: str, num_variants: int = 1):
+def _run_bg_swap(image: Image.Image, subject_type: str, style_name: str, num_variants: int = 1):
     if image is None:
-        raise gr.Error("Please upload a product photo first.")
+        raise gr.Error("Please upload a photo first.")
 
     image = image.convert("RGB")
 
-    # Step 1: segment the product (CPU)
-    cutout, mask = segment_product(image)
+    # Step 1: segment the subject -- person model for portraits, general for products
+    session_type = "person" if subject_type == "Portrait / selfie" else "general"
+    cutout, mask = segment_product(image, subject_type=session_type)
     soft_mask = feather_mask(mask, blur_radius=3)
 
     # Step 2: extract depth map for structure-consistent generation (CPU)
     depth_map = get_depth_map(image)
-    # Mask depth map with soft mask so background shapes don't bleed into generation
+    # Mask depth map with soft mask so old background shapes don't bleed into generation
     depth_map = Image.composite(depth_map, Image.new("L", depth_map.size, 0), soft_mask)
 
     style = STYLES[style_name]
@@ -69,7 +70,7 @@ def _run_bg_swap(image: Image.Image, style_name: str, num_variants: int = 1):
             seed=42 + i,
         )
 
-        # Step 4: composite the untouched product back on top (CPU)
+        # Step 4: composite the untouched subject back on top (CPU)
         composited = composite(cutout, soft_mask, background)
 
         # Step 5: add a soft shadow so it doesn't look pasted (CPU)
@@ -82,11 +83,11 @@ def _run_bg_swap(image: Image.Image, style_name: str, num_variants: int = 1):
 
 if has_spaces:
     @spaces.GPU(duration=120)
-    def process_bg_swap(image: Image.Image, style_name: str, num_variants: int = 1):
-        return _run_bg_swap(image, style_name, num_variants)
+    def process_bg_swap(image: Image.Image, subject_type: str, style_name: str, num_variants: int = 1):
+        return _run_bg_swap(image, subject_type, style_name, num_variants)
 else:
-    def process_bg_swap(image: Image.Image, style_name: str, num_variants: int = 1):
-        return _run_bg_swap(image, style_name, num_variants)
+    def process_bg_swap(image: Image.Image, subject_type: str, style_name: str, num_variants: int = 1):
+        return _run_bg_swap(image, subject_type, style_name, num_variants)
 
 
 with gr.Blocks(title="SnapStudio AI") as demo:
@@ -112,18 +113,38 @@ with gr.Blocks(title="SnapStudio AI") as demo:
             with gr.Row():
                 with gr.Column():
                     bg_input = gr.Image(type="pil", label="Upload photo")
+                    subject_type = gr.Radio(
+                        choices=["Portrait / selfie", "Product / object"],
+                        value="Portrait / selfie",
+                        label="What's in the photo?",
+                    )
                     style_dropdown = gr.Dropdown(
-                        choices=list(STYLES.keys()),
-                        value="Studio - white sweep",
+                        choices=[k for k in STYLES if k.startswith("Portrait")],
+                        value="Portrait - clean studio",
                         label="Style",
                     )
                     num_variants = gr.Slider(1, 4, value=1, step=1, label="Number of variants")
                     bg_btn = gr.Button("Generate", variant="primary")
+
+                    def _update_style_choices(subject):
+                        if subject == "Portrait / selfie":
+                            choices = [k for k in STYLES if k.startswith("Portrait")]
+                        else:
+                            choices = [k for k in STYLES if not k.startswith("Portrait")]
+                        return gr.update(choices=choices, value=choices[0])
+
+                    subject_type.change(
+                        fn=_update_style_choices,
+                        inputs=[subject_type],
+                        outputs=[style_dropdown],
+                    )
+
                 with gr.Column():
                     bg_output = gr.Gallery(label="Results", columns=2)
+
             bg_btn.click(
                 fn=process_bg_swap,
-                inputs=[bg_input, style_dropdown, num_variants],
+                inputs=[bg_input, subject_type, style_dropdown, num_variants],
                 outputs=bg_output,
             )
 
