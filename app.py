@@ -2,7 +2,8 @@
 Main entrypoint. This is the file Hugging Face Spaces runs.
 Multi-mode AI photo editor:
   Tab 1 — Auto-Enhance (fast, pure image processing)
-  Tab 2 — Background Swap (Stable Diffusion + ControlNet, portrait or product)
+  Tab 2 — Style Filter (whole-image img2img stylization)
+  Tab 3 — Background Swap (Stable Diffusion + ControlNet, portrait or product)
 """
 
 import os
@@ -26,7 +27,9 @@ from pipeline.generate_bg import generate_background
 from pipeline.composite import composite
 from pipeline.harmonize import add_shadow
 from pipeline.enhance import auto_enhance
+from pipeline.style_filter import apply_style
 from presets.styles import STYLES
+from presets.style_filters import STYLE_FILTERS
 
 
 try:
@@ -36,11 +39,38 @@ except ImportError:
     has_spaces = False
 
 
+# ── Auto-Enhance ──────────────────────────────────────────────────────────────
+
 def process_enhance(image: Image.Image):
     if image is None:
         raise gr.Error("Please upload a photo first.")
     return auto_enhance(image)
 
+
+# ── Style Filter ──────────────────────────────────────────────────────────────
+
+def _run_style_filter(image: Image.Image, style_name: str, strength: float):
+    if image is None:
+        raise gr.Error("Please upload a photo first.")
+    style = STYLE_FILTERS[style_name]
+    return apply_style(
+        image=image,
+        prompt=style["prompt"],
+        negative_prompt=style["negative_prompt"],
+        strength=strength,
+    )
+
+
+if has_spaces:
+    @spaces.GPU(duration=120)
+    def process_style_filter(image: Image.Image, style_name: str, strength: float):
+        return _run_style_filter(image, style_name, strength)
+else:
+    def process_style_filter(image: Image.Image, style_name: str, strength: float):
+        return _run_style_filter(image, style_name, strength)
+
+
+# ── Background Swap ───────────────────────────────────────────────────────────
 
 def _run_bg_swap(image: Image.Image, subject_type: str, style_name: str, num_variants: int = 1):
     if image is None:
@@ -48,34 +78,27 @@ def _run_bg_swap(image: Image.Image, subject_type: str, style_name: str, num_var
 
     image = image.convert("RGB")
 
-    # Step 1: segment the subject -- person model for portraits, general for products
+    # Step 1: segment - person model for portraits, general for products
     session_type = "person" if subject_type == "Portrait / selfie" else "general"
     cutout, mask = segment_product(image, subject_type=session_type)
     soft_mask = feather_mask(mask, blur_radius=3)
 
-    # Step 2: extract depth map for structure-consistent generation (CPU)
+    # Step 2: extract depth map (CPU)
     depth_map = get_depth_map(image)
-    # Mask depth map with soft mask so old background shapes don't bleed into generation
+    # Mask depth map so old background shapes don't bleed into new generation
     depth_map = Image.composite(depth_map, Image.new("L", depth_map.size, 0), soft_mask)
 
     style = STYLES[style_name]
-
     results = []
     for i in range(num_variants):
-        # Step 3: generate the new background
         background = generate_background(
             depth_map=depth_map,
             prompt=style["prompt"],
             negative_prompt=style["negative_prompt"],
             seed=42 + i,
         )
-
-        # Step 4: composite the untouched subject back on top (CPU)
         composited = composite(cutout, soft_mask, background)
-
-        # Step 5: add a soft shadow so it doesn't look pasted (CPU)
         final = add_shadow(composited, mask)
-
         results.append(final)
 
     return results
@@ -89,6 +112,8 @@ else:
     def process_bg_swap(image: Image.Image, subject_type: str, style_name: str, num_variants: int = 1):
         return _run_bg_swap(image, subject_type, style_name, num_variants)
 
+
+# ── UI ────────────────────────────────────────────────────────────────────────
 
 with gr.Blocks(title="SnapStudio AI") as demo:
     gr.Markdown(
@@ -104,6 +129,33 @@ with gr.Blocks(title="SnapStudio AI") as demo:
                 enhance_output = gr.Image(type="pil", label="Enhanced result")
             enhance_btn = gr.Button("Enhance", variant="primary")
             enhance_btn.click(fn=process_enhance, inputs=[enhance_input], outputs=[enhance_output])
+
+        with gr.Tab("🎨 Style Filter"):
+            gr.Markdown(
+                "_Turn your photo into anime, cartoon, painting, and more. "
+                "Runs on free CPU — roughly 30-60s per result._"
+            )
+            with gr.Row():
+                with gr.Column():
+                    style_filter_input = gr.Image(type="pil", label="Upload photo")
+                    style_filter_dropdown = gr.Dropdown(
+                        choices=list(STYLE_FILTERS.keys()),
+                        value="Anime",
+                        label="Style",
+                    )
+                    strength_slider = gr.Slider(
+                        0.3, 0.9, value=0.6, step=0.05,
+                        label="Transformation strength",
+                        info="Low = subtle, keeps photo recognizable. High = dramatic restyle.",
+                    )
+                    style_filter_btn = gr.Button("Transform", variant="primary")
+                with gr.Column():
+                    style_filter_output = gr.Image(type="pil", label="Result")
+            style_filter_btn.click(
+                fn=process_style_filter,
+                inputs=[style_filter_input, style_filter_dropdown, strength_slider],
+                outputs=style_filter_output,
+            )
 
         with gr.Tab("🖼️ Background Swap"):
             gr.Markdown(
