@@ -16,6 +16,7 @@ os.environ["NUMEXPR_NUM_THREADS"] = "2"
 import torch
 torch.set_num_threads(2)
 
+import gc
 import gradio as gr
 from PIL import Image
 
@@ -30,12 +31,36 @@ from pipeline.inpaint import remove_object
 from presets.styles import STYLES
 from presets.style_filters import STYLE_FILTERS
 
+import pipeline.inpaint as inpaint_mod
+import pipeline.style_filter as style_filter_mod
+import pipeline.generate_bg as bg_mod
 
 try:
     import spaces
     has_spaces = True
 except ImportError:
     has_spaces = False
+
+
+def free_unused_models(active_mode: str):
+    """
+    Frees memory for models that aren't the currently active mode.
+    This prevents OOM crashes on the free CPU-Basic tier by ensuring
+    only one large diffusion model is in memory at a time.
+    """
+    cleared = False
+    if active_mode != "bg_swap" and bg_mod._pipe is not None:
+        bg_mod._pipe = None
+        cleared = True
+    if active_mode != "inpaint" and inpaint_mod._pipe is not None:
+        inpaint_mod._pipe = None
+        cleared = True
+    if active_mode != "style" and style_filter_mod._pipe is not None:
+        style_filter_mod._pipe = None
+        cleared = True
+
+    if cleared:
+        gc.collect()
 
 
 # ── Auto-Enhance ──────────────────────────────────────────────────────────────
@@ -48,9 +73,11 @@ def process_enhance(image: Image.Image):
 
 # ── Remove Object ─────────────────────────────────────────────────────────────
 
-def _run_remove_object(editor_value: dict):
+def _run_remove_object(editor_value: dict, progress=gr.Progress(track_tqdm=True)):
     if editor_value is None or editor_value.get("background") is None:
         raise gr.Error("Please upload a photo first.")
+        
+    free_unused_models("inpaint")
 
     background = editor_value["background"]
     layers = editor_value.get("layers", [])
@@ -70,18 +97,21 @@ def _run_remove_object(editor_value: dict):
 
 if has_spaces:
     @spaces.GPU(duration=240)
-    def process_remove_object(editor_value: dict):
-        return _run_remove_object(editor_value)
+    def process_remove_object(editor_value: dict, progress=gr.Progress(track_tqdm=True)):
+        return _run_remove_object(editor_value, progress)
 else:
-    def process_remove_object(editor_value: dict):
-        return _run_remove_object(editor_value)
+    def process_remove_object(editor_value: dict, progress=gr.Progress(track_tqdm=True)):
+        return _run_remove_object(editor_value, progress)
 
 
 # ── Style Filter ──────────────────────────────────────────────────────────────
 
-def _run_style_filter(image: Image.Image, style_name: str, strength: float):
+def _run_style_filter(image: Image.Image, style_name: str, strength: float, progress=gr.Progress(track_tqdm=True)):
     if image is None:
         raise gr.Error("Please upload a photo first.")
+        
+    free_unused_models("style")
+        
     style = STYLE_FILTERS[style_name]
     return apply_style(
         image=image,
@@ -93,18 +123,20 @@ def _run_style_filter(image: Image.Image, style_name: str, strength: float):
 
 if has_spaces:
     @spaces.GPU(duration=120)
-    def process_style_filter(image: Image.Image, style_name: str, strength: float):
-        return _run_style_filter(image, style_name, strength)
+    def process_style_filter(image: Image.Image, style_name: str, strength: float, progress=gr.Progress(track_tqdm=True)):
+        return _run_style_filter(image, style_name, strength, progress)
 else:
-    def process_style_filter(image: Image.Image, style_name: str, strength: float):
-        return _run_style_filter(image, style_name, strength)
+    def process_style_filter(image: Image.Image, style_name: str, strength: float, progress=gr.Progress(track_tqdm=True)):
+        return _run_style_filter(image, style_name, strength, progress)
 
 
 # ── Background Swap ───────────────────────────────────────────────────────────
 
-def _run_bg_swap(image: Image.Image, subject_type: str, style_name: str, num_variants: int = 1):
+def _run_bg_swap(image: Image.Image, subject_type: str, style_name: str, num_variants: int = 1, progress=gr.Progress(track_tqdm=True)):
     if image is None:
         raise gr.Error("Please upload a product photo first.")
+        
+    free_unused_models("bg_swap")
 
     image = image.convert("RGB")
 
@@ -147,11 +179,11 @@ def _run_bg_swap(image: Image.Image, subject_type: str, style_name: str, num_var
 
 if has_spaces:
     @spaces.GPU(duration=180)
-    def process_bg_swap(image: Image.Image, subject_type: str, style_name: str, num_variants: int = 1):
-        return _run_bg_swap(image, subject_type, style_name, num_variants)
+    def process_bg_swap(image: Image.Image, subject_type: str, style_name: str, num_variants: int = 1, progress=gr.Progress(track_tqdm=True)):
+        return _run_bg_swap(image, subject_type, style_name, num_variants, progress)
 else:
-    def process_bg_swap(image: Image.Image, subject_type: str, style_name: str, num_variants: int = 1):
-        return _run_bg_swap(image, subject_type, style_name, num_variants)
+    def process_bg_swap(image: Image.Image, subject_type: str, style_name: str, num_variants: int = 1, progress=gr.Progress(track_tqdm=True)):
+        return _run_bg_swap(image, subject_type, style_name, num_variants, progress)
 
 
 # ── UI ────────────────────────────────────────────────────────────────────────
