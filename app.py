@@ -4,6 +4,17 @@ Wraps the full pipeline: segment -> depth/edge -> generate background ->
 composite -> harmonize -> return gallery of results.
 """
 
+import os
+# Limit threads to match Hugging Face CPU Space allocation and avoid host CPU context-switching deadlocks.
+os.environ["OMP_NUM_THREADS"] = "2"
+os.environ["MKL_NUM_THREADS"] = "2"
+os.environ["OPENBLAS_NUM_THREADS"] = "2"
+os.environ["VECLIB_MAXIMUM_THREADS"] = "2"
+os.environ["NUMEXPR_NUM_THREADS"] = "2"
+
+import torch
+torch.set_num_threads(2)
+
 import gradio as gr
 from PIL import Image
 
@@ -82,10 +93,10 @@ with gr.Blocks(title="SnapStudio AI") as demo:
                 value="Studio - white sweep",
                 label="Style",
             )
-            num_variants = gr.Slider(1, 4, value=3, step=1, label="Number of variants")
+            num_variants = gr.Slider(1, 4, value=1, step=1, label="Number of variants")
             generate_btn = gr.Button("Generate", variant="primary")
             gr.Markdown(
-                "_Runs on free CPU hosting -- each variant takes roughly 30-60s to generate. "
+                "_Runs on free CPU hosting -- each variant takes roughly 1-2 minutes to generate. "
                 "Please be patient on the first run while the models download._"
             )
 
