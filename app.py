@@ -23,7 +23,7 @@ from pipeline.segment import segment_product, feather_mask
 from pipeline.depth_edges import get_depth_map
 from pipeline.generate_bg import generate_background
 from pipeline.composite import composite
-from pipeline.harmonize import add_shadow
+from pipeline.harmonize import add_shadow, harmonize_tone
 from pipeline.enhance import auto_enhance
 from pipeline.style_filter import apply_style
 from pipeline.inpaint import remove_object
@@ -130,8 +130,12 @@ def _run_bg_swap(image: Image.Image, subject_type: str, style_name: str, num_var
             seed=42 + i,  # different seed per variant for variety
         )
 
-        # Step 4: composite the untouched product back on top (CPU)
-        composited = composite(cutout, soft_mask, background)
+        # Step 3.5: color-match the product to the new background's tone,
+        # before compositing -- this is what stops it looking "pasted on"
+        tone_matched_cutout = harmonize_tone(cutout, mask, background)
+
+        # Step 4: composite the tone-matched product back on top (CPU)
+        composited = composite(tone_matched_cutout, soft_mask, background)
 
         # Step 5: harmonize -- add a soft shadow so it doesn't look pasted (CPU)
         final = add_shadow(composited, mask)
