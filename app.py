@@ -1,9 +1,7 @@
 """
 Main entrypoint. This is the file Hugging Face Spaces runs.
-Multi-mode AI photo editor:
-  Tab 1 — Auto-Enhance (fast, pure image processing)
-  Tab 2 — Style Filter (whole-image img2img stylization)
-  Tab 3 — Background Swap (Stable Diffusion + ControlNet, portrait or product)
+Wraps the full pipeline: segment -> depth/edge -> generate background ->
+composite -> harmonize -> return gallery of results.
 """
 
 import os
@@ -28,6 +26,7 @@ from pipeline.composite import composite
 from pipeline.harmonize import add_shadow
 from pipeline.enhance import auto_enhance
 from pipeline.style_filter import apply_style
+from pipeline.inpaint import remove_object
 from presets.styles import STYLES
 from presets.style_filters import STYLE_FILTERS
 
@@ -45,6 +44,37 @@ def process_enhance(image: Image.Image):
     if image is None:
         raise gr.Error("Please upload a photo first.")
     return auto_enhance(image)
+
+
+# ── Remove Object ─────────────────────────────────────────────────────────────
+
+def _run_remove_object(editor_value: dict):
+    if editor_value is None or editor_value.get("background") is None:
+        raise gr.Error("Please upload a photo first.")
+
+    background = editor_value["background"]
+    layers = editor_value.get("layers", [])
+
+    if not layers:
+        raise gr.Error("Please paint over the object you want to remove.")
+
+    # The user's brush strokes live in the layer's alpha channel -- combine
+    # all layers into one mask (white = painted = "remove this").
+    mask = Image.new("L", background.size, 0)
+    for layer in layers:
+        layer_alpha = layer.split()[-1]  # alpha channel of this brush layer
+        mask = Image.composite(Image.new("L", background.size, 255), mask, layer_alpha)
+
+    return remove_object(background, mask)
+
+
+if has_spaces:
+    @spaces.GPU(duration=240)
+    def process_remove_object(editor_value: dict):
+        return _run_remove_object(editor_value)
+else:
+    def process_remove_object(editor_value: dict):
+        return _run_remove_object(editor_value)
 
 
 # ── Style Filter ──────────────────────────────────────────────────────────────
@@ -74,38 +104,45 @@ else:
 
 def _run_bg_swap(image: Image.Image, subject_type: str, style_name: str, num_variants: int = 1):
     if image is None:
-        raise gr.Error("Please upload a photo first.")
+        raise gr.Error("Please upload a product photo first.")
 
     image = image.convert("RGB")
 
-    # Step 1: segment - person model for portraits, general for products
+    # Step 1: segment the subject (CPU) -- "person" model for portraits, "general" for products
     session_type = "person" if subject_type == "Portrait / selfie" else "general"
     cutout, mask = segment_product(image, subject_type=session_type)
     soft_mask = feather_mask(mask, blur_radius=3)
 
-    # Step 2: extract depth map (CPU)
+    # Step 2: extract depth map for structure-consistent generation (CPU)
     depth_map = get_depth_map(image)
-    # Mask depth map so old background shapes don't bleed into new generation
+    # Mask depth map with soft mask so old background shapes don't bleed into generation
     depth_map = Image.composite(depth_map, Image.new("L", depth_map.size, 0), soft_mask)
 
     style = STYLES[style_name]
+
     results = []
     for i in range(num_variants):
+        # Step 3: generate the new background
         background = generate_background(
             depth_map=depth_map,
             prompt=style["prompt"],
             negative_prompt=style["negative_prompt"],
-            seed=42 + i,
+            seed=42 + i,  # different seed per variant for variety
         )
+
+        # Step 4: composite the untouched product back on top (CPU)
         composited = composite(cutout, soft_mask, background)
+
+        # Step 5: harmonize -- add a soft shadow so it doesn't look pasted (CPU)
         final = add_shadow(composited, mask)
+
         results.append(final)
 
     return results
 
 
 if has_spaces:
-    @spaces.GPU(duration=120)
+    @spaces.GPU(duration=180)
     def process_bg_swap(image: Image.Image, subject_type: str, style_name: str, num_variants: int = 1):
         return _run_bg_swap(image, subject_type, style_name, num_variants)
 else:
@@ -123,17 +160,39 @@ with gr.Blocks(title="SnapStudio AI") as demo:
 
     with gr.Tabs():
         with gr.Tab("✨ Auto-Enhance"):
-            gr.Markdown("_Fast (1-2 seconds) — fixes lighting, color, and sharpness automatically._")
+            gr.Markdown("_Fast (1-2 seconds) -- fixes lighting, color, and sharpness automatically._")
             with gr.Row():
                 enhance_input = gr.Image(type="pil", label="Upload photo")
                 enhance_output = gr.Image(type="pil", label="Enhanced result")
             enhance_btn = gr.Button("Enhance", variant="primary")
             enhance_btn.click(fn=process_enhance, inputs=[enhance_input], outputs=[enhance_output])
 
+        with gr.Tab("🧹 Remove Object"):
+            gr.Markdown(
+                "_Paint over what you want removed with the brush tool. "
+                "**Slower than other modes** -- roughly 2-4 minutes, since object "
+                "removal needs a different model that isn't compatible with our speed trick._"
+            )
+            with gr.Row():
+                with gr.Column():
+                    remove_editor = gr.ImageEditor(
+                        type="pil",
+                        label="Upload photo, then paint over the object to remove",
+                        brush=gr.Brush(colors=["#ffffff"], default_size=25),
+                    )
+                    remove_btn = gr.Button("Remove", variant="primary")
+                with gr.Column():
+                    remove_output = gr.Image(type="pil", label="Result")
+            remove_btn.click(
+                fn=process_remove_object,
+                inputs=[remove_editor],
+                outputs=remove_output,
+            )
+
         with gr.Tab("🎨 Style Filter"):
             gr.Markdown(
                 "_Turn your photo into anime, cartoon, painting, and more. "
-                "Runs on free CPU — roughly 30-60s per result._"
+                "Runs on free CPU -- roughly 30-60s per result._"
             )
             with gr.Row():
                 with gr.Column():
@@ -146,7 +205,7 @@ with gr.Blocks(title="SnapStudio AI") as demo:
                     strength_slider = gr.Slider(
                         0.3, 0.9, value=0.6, step=0.05,
                         label="Transformation strength",
-                        info="Low = subtle, keeps photo recognizable. High = dramatic restyle.",
+                        info="Low = subtle, keeps original photo recognizable. High = dramatic restyle.",
                     )
                     style_filter_btn = gr.Button("Transform", variant="primary")
                 with gr.Column():
@@ -159,7 +218,7 @@ with gr.Blocks(title="SnapStudio AI") as demo:
 
         with gr.Tab("🖼️ Background Swap"):
             gr.Markdown(
-                "_Runs on free CPU hosting — each variant takes roughly 1-2 minutes. "
+                "_Runs on free CPU hosting -- each variant takes roughly 1-2 minutes. "
                 "Please be patient, especially on the first run while models download._"
             )
             with gr.Row():
@@ -190,10 +249,8 @@ with gr.Blocks(title="SnapStudio AI") as demo:
                         inputs=[subject_type],
                         outputs=[style_dropdown],
                     )
-
                 with gr.Column():
                     bg_output = gr.Gallery(label="Results", columns=2)
-
             bg_btn.click(
                 fn=process_bg_swap,
                 inputs=[bg_input, subject_type, style_dropdown, num_variants],
