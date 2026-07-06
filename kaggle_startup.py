@@ -23,7 +23,6 @@ except Exception as e:
     print(f"⚠️ Clean step warning: {e}")
 
 packages = [
-    "numpy>=1.24.0,<2.0.0",
     "gradio>=4.40.0",
     "diffusers>=0.30.0",
     "transformers>=4.46.3",
