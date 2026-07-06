@@ -8,13 +8,22 @@ Two models are supported:
                skin tones, and clothing edges much better than the general model
 """
 
-from rembg import remove, new_session
+_rembg_loaded = False
+try:
+    from rembg import remove, new_session
+    _rembg_loaded = True
+except Exception as e:
+    import sys
+    print(f"⚠️ Warning: rembg could not be imported due to environment issues: {e}", file=sys.stderr)
+
 from PIL import Image
 
 _sessions = {}
 
 
 def _get_session(subject_type: str):
+    if not _rembg_loaded:
+        raise ImportError("rembg is unavailable because of a precompiled dependency conflict in the environment.")
     if subject_type not in _sessions:
         model_name = "u2net_human_seg" if subject_type == "person" else "isnet-general-use"
         _sessions[subject_type] = new_session(model_name)
