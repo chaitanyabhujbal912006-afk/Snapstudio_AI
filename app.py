@@ -188,9 +188,9 @@ else:
 
 # ── UI ────────────────────────────────────────────────────────────────────────
 
-with gr.Blocks(title="SnapStudio AI") as demo:
+with gr.Blocks(title="SnapStudio_AI") as demo:
     gr.Markdown(
-        "# SnapStudio AI\n"
+        "# SnapStudio_AI\n"
         "Pick a mode below, upload a photo, and get an AI-enhanced result back."
     )
 

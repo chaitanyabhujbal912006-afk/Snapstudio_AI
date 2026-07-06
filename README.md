@@ -1,15 +1,16 @@
 ---
-title: SnapStudio AI
+title: SnapStudio_AI
 emoji: 📸
-colorFrom: purple
-colorTo: blue
+colorFrom: pink
+colorTo: purple
 sdk: gradio
-sdk_version: 5.49.1
+sdk_version: 4.44.1
 app_file: app.py
 pinned: false
+license: mit
 ---
 
-# SnapStudio AI
+# SnapStudio_AI
 
 Upload one raw product photo, get studio-quality shots back — same product,
 new background, generated automatically.
