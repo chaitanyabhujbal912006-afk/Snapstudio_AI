@@ -7,15 +7,41 @@
 // ── Core Gradio caller ────────────────────────────────────────────────────────
 
 async function gradioCall(baseUrl: string, fnName: string, payload: unknown[]): Promise<unknown[]> {
-  const postRes = await fetch(`${baseUrl}/call/${fnName}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ data: payload }),
-  });
+  const isRemote = baseUrl.includes(".gradio.live");
+
+  let postRes;
+  if (isRemote) {
+    postRes = await fetch("/api/proxy", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-target-url": `${baseUrl}/call/${fnName}`
+      },
+      body: JSON.stringify({ data: payload }),
+    });
+  } else {
+    postRes = await fetch(`${baseUrl}/call/${fnName}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ data: payload }),
+    });
+  }
+
   if (!postRes.ok) throw new Error(`POST ${fnName} failed: ${postRes.status}`);
   const { event_id } = await postRes.json();
 
-  const getRes = await fetch(`${baseUrl}/call/${fnName}/${event_id}`);
+  let getRes;
+  if (isRemote) {
+    getRes = await fetch("/api/proxy", {
+      method: "GET",
+      headers: {
+        "x-target-url": `${baseUrl}/call/${fnName}/${event_id}`
+      }
+    });
+  } else {
+    getRes = await fetch(`${baseUrl}/call/${fnName}/${event_id}`);
+  }
+
   if (!getRes.ok) throw new Error(`GET ${fnName} result failed: ${getRes.status}`);
   const text = await getRes.text();
 

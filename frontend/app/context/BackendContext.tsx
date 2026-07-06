@@ -27,18 +27,45 @@ export function BackendProvider({ children }: { children: ReactNode }) {
     setIsConnecting(true);
     setIsConnected(false);
     try {
+      const isRemote = trimmed.includes(".gradio.live");
+      
       // Call Gradio API to get presets
-      const res = await fetch(`${trimmed}/call/api_get_presets`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ data: [] }),
-      });
+      let res;
+      if (isRemote) {
+        res = await fetch("/api/proxy", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-target-url": `${trimmed}/call/api_get_presets`
+          },
+          body: JSON.stringify({ data: [] }),
+        });
+      } else {
+        res = await fetch(`${trimmed}/call/api_get_presets`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ data: [] }),
+        });
+      }
+      
       if (!res.ok) throw new Error("Connection failed");
       const json = await res.json();
       const eventId = json.event_id;
 
       // Poll for result
-      const resultRes = await fetch(`${trimmed}/call/api_get_presets/${eventId}`);
+      let resultRes;
+      if (isRemote) {
+        resultRes = await fetch("/api/proxy", {
+          method: "GET",
+          headers: {
+            "x-target-url": `${trimmed}/call/api_get_presets/${eventId}`
+          }
+        });
+      } else {
+        resultRes = await fetch(`${trimmed}/call/api_get_presets/${eventId}`);
+      }
+      
+      if (!resultRes.ok) throw new Error("Connection polling failed");
       const text = await resultRes.text();
       const match = text.match(/data:\s*(\[[\s\S]*?\])/);
       if (match) {
