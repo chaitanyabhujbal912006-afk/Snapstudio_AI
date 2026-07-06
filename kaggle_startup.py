@@ -15,6 +15,13 @@ Steps:
 # ─── CELL 1: Install dependencies ────────────────────────────────────────────
 import subprocess, sys
 
+# Clean up pre-installed conflicting ONNX packages to avoid namespace corruption
+print("🧹 Cleaning up pre-installed ONNX packages...")
+try:
+    subprocess.check_call([sys.executable, "-m", "pip", "uninstall", "-y", "onnxruntime", "onnxruntime-gpu", "rembg", "-q"])
+except Exception as e:
+    print(f"⚠️ Clean step warning: {e}")
+
 packages = [
     "numpy>=1.24.0,<2.0.0",
     "gradio>=4.40.0",
@@ -33,6 +40,7 @@ packages = [
     "xformers",   # memory-efficient attention for GPU
 ]
 
+print("📥 Installing dependencies...")
 subprocess.check_call([sys.executable, "-m", "pip", "install", *packages, "-q"])
 print("✅ Dependencies installed")
 
