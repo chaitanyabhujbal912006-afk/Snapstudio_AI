@@ -23,6 +23,7 @@ except Exception as e:
     print(f"⚠️ Clean step warning: {e}")
 
 packages = [
+    "numpy>=2.0.0",
     "gradio>=4.40.0",
     "diffusers>=0.30.0",
     "transformers>=4.46.3",
@@ -30,7 +31,7 @@ packages = [
     "peft>=0.8.0",
     "controlnet-aux>=0.0.10",
     "rembg>=2.0.68",
-    "onnxruntime>=1.16.0",
+    "onnxruntime>=1.19.0",
     "opencv-python-headless>=4.8.0",
     "scipy>=1.11.0",
     "scikit-image>=0.21.0",
