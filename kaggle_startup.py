@@ -15,15 +15,16 @@ Steps:
 # ─── CELL 1: Install dependencies ────────────────────────────────────────────
 import subprocess, sys
 
-# Clean up pre-installed conflicting ONNX packages to avoid namespace corruption
-print("🧹 Cleaning up pre-installed ONNX packages...")
+# Clean up pre-installed conflicting ONNX and Numba packages to avoid namespace corruption
+print("🧹 Cleaning up pre-installed conflicting packages...")
 try:
-    subprocess.check_call([sys.executable, "-m", "pip", "uninstall", "-y", "onnxruntime", "onnxruntime-gpu", "rembg", "-q"])
+    subprocess.check_call([sys.executable, "-m", "pip", "uninstall", "-y", "onnxruntime", "onnxruntime-gpu", "rembg", "numba", "-q"])
 except Exception as e:
     print(f"⚠️ Clean step warning: {e}")
 
 packages = [
     "numpy>=2.0.0",
+    "numba>=0.60.0",  # Re-install numba to ensure binary compatibility with installed NumPy 2.x
     "gradio>=4.40.0",
     "diffusers>=0.30.0",
     "transformers>=4.46.3",
