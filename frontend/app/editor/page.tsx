@@ -192,7 +192,7 @@ export default function Home() {
 
   return (
     <BackendProvider>
-      <div className="relative min-h-screen overflow-x-hidden flex flex-col">
+      <div className="relative h-screen overflow-hidden flex flex-col">
         {/* Background orbs */}
         <div className="bg-orb w-[700px] h-[700px] bg-violet-700/12 top-[-150px] left-[-250px]" />
         <div className="bg-orb w-[500px] h-[500px] bg-purple-700/8 top-[45%] right-[-150px]" />
@@ -201,46 +201,48 @@ export default function Home() {
         <Header />
 
         {/* Main layout */}
-        <div className="relative z-10 flex flex-1 pt-16 max-w-[1280px] mx-auto w-full">
+        <div className="relative z-10 flex flex-1 pt-16 max-w-[1280px] mx-auto w-full overflow-hidden">
           {/* Sidebar */}
           <Sidebar activeId={activeId} onChange={setActiveId} />
 
           {/* Content */}
-          <main className="flex-1 overflow-y-auto px-8 py-8">
-            {/* Tool header breadcrumb */}
-            <div className="mb-6 flex justify-between items-center">
-              <div className="inline-flex items-center gap-2 text-xs text-zinc-600">
-                <Link href="/" className="hover:text-zinc-400 transition-colors flex items-center gap-1">
-                  <ArrowLeft size={12} /> Dashboard
-                </Link>
-                <span>/</span>
-                <span className="text-violet-400 font-medium capitalize">
-                  {activeId.replace("_", " ")}
-                </span>
+          <main className="flex-1 overflow-y-auto px-8 py-8 flex flex-col justify-between">
+            <div>
+              {/* Tool header breadcrumb */}
+              <div className="mb-6 flex justify-between items-center">
+                <div className="inline-flex items-center gap-2 text-xs text-zinc-600">
+                  <Link href="/" className="hover:text-zinc-400 transition-colors flex items-center gap-1">
+                    <ArrowLeft size={12} /> Dashboard
+                  </Link>
+                  <span>/</span>
+                  <span className="text-violet-400 font-medium capitalize">
+                    {activeId.replace("_", " ")}
+                  </span>
+                </div>
               </div>
+
+              {/* Panel card */}
+              <div className="rounded-2xl border border-white/[0.08] bg-white/[0.025] backdrop-blur-xl shadow-2xl shadow-black/30 overflow-hidden">
+                <div className="h-px bg-gradient-to-r from-transparent via-violet-500/40 to-transparent" />
+                <div className="p-6 md:p-8">
+                  <ActivePanel id={activeId} />
+                </div>
+              </div>
+
+              {/* Tip */}
+              <p className="text-center text-xs text-zinc-700 mt-5">
+                ⚡ GPU features require a connected Kaggle backend · Sessions last 9–12 hrs
+              </p>
             </div>
 
-            {/* Panel card */}
-            <div className="rounded-2xl border border-white/[0.08] bg-white/[0.025] backdrop-blur-xl shadow-2xl shadow-black/30 overflow-hidden">
-              <div className="h-px bg-gradient-to-r from-transparent via-violet-500/40 to-transparent" />
-              <div className="p-6 md:p-8">
-                <ActivePanel id={activeId} />
-              </div>
+            {/* Footer inside scroll area */}
+            <div className="border-t border-white/[0.04] pt-8 mt-12 text-center pb-2">
+              <p className="text-zinc-700 text-xs">
+                SnapStudio AI · 13 AI-powered tools · Frontend on <span className="text-zinc-500">Vercel</span> · GPU on <span className="text-zinc-500">Kaggle</span>
+              </p>
             </div>
-
-            {/* Tip */}
-            <p className="text-center text-xs text-zinc-700 mt-5">
-              ⚡ GPU features require a connected Kaggle backend · Sessions last 9–12 hrs
-            </p>
           </main>
         </div>
-
-        {/* Footer */}
-        <footer className="relative z-10 border-t border-white/[0.04] py-5 px-6 text-center">
-          <p className="text-zinc-700 text-xs">
-            SnapStudio AI · 13 AI-powered tools · Frontend on <span className="text-zinc-500">Vercel</span> · GPU on <span className="text-zinc-500">Kaggle</span>
-          </p>
-        </footer>
       </div>
     </BackendProvider>
   );
