@@ -23,6 +23,7 @@ packages = [
     "peft>=0.8.0",
     "controlnet-aux>=0.0.10",
     "rembg>=2.0.68",
+    "onnxruntime-gpu>=1.16.0",
     "opencv-python-headless>=4.8.0",
     "scipy>=1.11.0",
     "scikit-image>=0.21.0",

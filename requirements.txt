@@ -12,7 +12,8 @@ peft>=0.8.0
 
 # ── ControlNet / segmentation ─────────────────────────────────────────────────
 controlnet-aux>=0.0.10
-rembg>=2.0.68            # GPU instance: rembg auto-uses CUDA if available
+rembg>=2.0.68
+onnxruntime-gpu>=1.16.0
 
 # ── Computer vision ───────────────────────────────────────────────────────────
 opencv-python-headless>=4.8.0
