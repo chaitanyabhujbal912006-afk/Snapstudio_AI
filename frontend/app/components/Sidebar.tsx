@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import {
   Sparkles, ImageIcon, Palette, Eraser, Zap,
-  SlidersHorizontal, UserCheck, Wind, ArrowsUpFromLine,
+  SlidersHorizontal, UserCheck, Wind, ArrowUpFromLine,
   Scan, Wand2, Type, Maximize2, ChevronRight
 } from "lucide-react";
 
@@ -44,7 +44,7 @@ const CATEGORIES: Category[] = [
     features: [
       { id: "upscale",      label: "Upscale 4×",          icon: Maximize2,       speed: "~15s"  },
       { id: "face_enhance", label: "Face Restore",         icon: Scan,            speed: "~20s"  },
-      { id: "bg_blur",      label: "Background Blur",      icon: ArrowsUpFromLine, speed: "~5s"  },
+      { id: "bg_blur",      label: "Background Blur",      icon: ArrowUpFromLine, speed: "~5s"  },
     ],
   },
   {
