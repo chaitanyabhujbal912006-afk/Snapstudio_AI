@@ -19,14 +19,22 @@ def _load_pipeline():
     if _pipe is not None:
         return _pipe
 
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    dtype = torch.float16 if device == "cuda" else torch.float32
+
     pipe = StableDiffusionImg2ImgPipeline.from_pretrained(
         "runwayml/stable-diffusion-v1-5",
-        torch_dtype=torch.float32,
+        torch_dtype=dtype,
         safety_checker=None,
-    )
+    ).to(device)
+
     pipe.load_lora_weights("latent-consistency/lcm-lora-sdv1-5")
     pipe.scheduler = LCMScheduler.from_config(pipe.scheduler.config)
-    pipe.enable_attention_slicing()  # Reduces peak memory on CPU
+
+    if device == "cuda":
+        pipe.enable_xformers_memory_efficient_attention()
+    else:
+        pipe.enable_attention_slicing()
 
     _pipe = pipe
     return _pipe
@@ -48,7 +56,8 @@ def apply_style(image: Image.Image, prompt: str, negative_prompt: str,
         PIL Image (RGB), stylized result.
     """
     pipe = _load_pipeline()
-    generator = torch.Generator(device="cpu").manual_seed(seed)
+    device = next(pipe.unet.parameters()).device.type
+    generator = torch.Generator(device=device).manual_seed(seed)
 
     orig_size = image.size
 

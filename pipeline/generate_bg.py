@@ -19,23 +19,29 @@ def _load_pipeline():
     if _pipe is not None:
         return _pipe
 
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    dtype = torch.float16 if device == "cuda" else torch.float32
+
     controlnet = ControlNetModel.from_pretrained(
         "lllyasviel/sd-controlnet-depth",
-        torch_dtype=torch.float32,  # float32 on CPU -- float16 is not reliably supported off-GPU
+        torch_dtype=dtype,
     )
 
     pipe = StableDiffusionControlNetPipeline.from_pretrained(
         "runwayml/stable-diffusion-v1-5",
         controlnet=controlnet,
-        torch_dtype=torch.float32,
+        torch_dtype=dtype,
         safety_checker=None,
-    )
+    ).to(device)
 
-    # LCM-LoRA: lets us generate in ~6-8 steps instead of ~25, which is what
-    # makes this workable on free CPU hosting.
+    # LCM-LoRA: lets us generate in ~6-8 steps instead of ~25
     pipe.load_lora_weights("latent-consistency/lcm-lora-sdv1-5")
     pipe.scheduler = LCMScheduler.from_config(pipe.scheduler.config)
-    pipe.enable_attention_slicing()
+
+    if device == "cuda":
+        pipe.enable_xformers_memory_efficient_attention()
+    else:
+        pipe.enable_attention_slicing()
 
     _pipe = pipe
     return _pipe
@@ -44,6 +50,7 @@ def _load_pipeline():
 def generate_background(depth_map: Image.Image, prompt: str, negative_prompt: str,
                          steps: int = 6, guidance_scale: float = 1.5, seed: int = None) -> Image.Image:
     pipe = _load_pipeline()
+    device = next(pipe.unet.parameters()).device.type
 
     orig_size = depth_map.size
     w, h = orig_size
@@ -61,7 +68,7 @@ def generate_background(depth_map: Image.Image, prompt: str, negative_prompt: st
 
     generator = None
     if seed is not None:
-        generator = torch.Generator(device="cpu").manual_seed(seed)
+        generator = torch.Generator(device=device).manual_seed(seed)
 
     result = pipe(
         prompt=prompt,
