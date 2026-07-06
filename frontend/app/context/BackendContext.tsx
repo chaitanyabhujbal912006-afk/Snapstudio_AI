@@ -40,7 +40,7 @@ export function BackendProvider({ children }: { children: ReactNode }) {
       // Poll for result
       const resultRes = await fetch(`${trimmed}/call/api_get_presets/${eventId}`);
       const text = await resultRes.text();
-      const match = text.match(/data:\s*(\[.*?\])/s);
+      const match = text.match(/data:\s*(\[[\s\S]*?\])/);
       if (match) {
         const data = JSON.parse(match[1]);
         const presetsData = data[0];
