@@ -431,13 +431,13 @@ with gr.Blocks(title="SnapStudio AI — GPU Backend") as demo:
     # ── Metadata ──────────────────────────────────────────────────────────────
     with gr.Tab("Presets/Info"):
         p_out = gr.JSON(label="presets")
-        gr.Button("Get Presets").click(api_get_presets, inputs=[], outputs=[p_out])
+        gr.Button("Get Presets").click(api_get_presets, inputs=[], outputs=[p_out], api_name="api_get_presets")
 
     # ── Quick Edit ────────────────────────────────────────────────────────────
     with gr.Tab("Auto-Enhance"):
         ae_in = gr.Textbox(label="image_b64")
         ae_out = gr.JSON(label="result")
-        gr.Button("Run").click(api_enhance, inputs=[ae_in], outputs=[ae_out])
+        gr.Button("Run").click(api_enhance, inputs=[ae_in], outputs=[ae_out], api_name="api_enhance")
 
     with gr.Tab("Color Grade"):
         cg_img = gr.Textbox(label="image_b64")
@@ -457,7 +457,7 @@ with gr.Blocks(title="SnapStudio AI — GPU Backend") as demo:
             inputs=[cg_img, cg_grade, cg_intensity, cg_exposure, cg_contrast,
                     cg_highlights, cg_shadows, cg_temperature, cg_saturation,
                     cg_vibrance, cg_vignette, cg_grain],
-            outputs=[cg_out])
+            outputs=[cg_out], api_name="api_color_grade")
 
     with gr.Tab("Portrait Retouch"):
         rt_img = gr.Textbox(label="image_b64")
@@ -470,7 +470,7 @@ with gr.Blocks(title="SnapStudio AI — GPU Backend") as demo:
         rt_out = gr.JSON(label="result")
         gr.Button("Run").click(api_retouch,
             inputs=[rt_img, rt_smooth, rt_clarity, rt_sharpen, rt_vibrance, rt_shadow, rt_teeth],
-            outputs=[rt_out])
+            outputs=[rt_out], api_name="api_retouch")
 
     with gr.Tab("Denoise"):
         dn_img = gr.Textbox(label="image_b64")
@@ -478,28 +478,28 @@ with gr.Blocks(title="SnapStudio AI — GPU Backend") as demo:
         dn_mode = gr.Textbox(label="mode (light/balanced/strong)", value="balanced")
         dn_color = gr.Checkbox(label="preserve_color", value=True)
         dn_out = gr.JSON(label="result")
-        gr.Button("Run").click(api_denoise, inputs=[dn_img, dn_strength, dn_mode, dn_color], outputs=[dn_out])
+        gr.Button("Run").click(api_denoise, inputs=[dn_img, dn_strength, dn_mode, dn_color], outputs=[dn_out], api_name="api_denoise")
 
     with gr.Tab("Effects"):
         ef_img = gr.Textbox(label="image_b64")
         ef_type = gr.Textbox(label="effect (hdr/vignette/grain/bloom/chromatic/cross_process/color_splash/orton)")
         ef_params = gr.JSON(label="params (JSON object)", value={"strength": 0.6})
         ef_out = gr.JSON(label="result")
-        gr.Button("Run").click(api_effect, inputs=[ef_img, ef_type, ef_params], outputs=[ef_out])
+        gr.Button("Run").click(api_effect, inputs=[ef_img, ef_type, ef_params], outputs=[ef_out], api_name="api_effect")
 
     # ── AI Enhance ────────────────────────────────────────────────────────────
     with gr.Tab("Upscale 4x"):
         up_img = gr.Textbox(label="image_b64")
         up_scale = gr.Number(label="scale (2 or 4)", value=4)
         up_out = gr.JSON(label="result")
-        gr.Button("Run").click(api_upscale, inputs=[up_img, up_scale], outputs=[up_out])
+        gr.Button("Run").click(api_upscale, inputs=[up_img, up_scale], outputs=[up_out], api_name="api_upscale")
 
     with gr.Tab("Face Enhance"):
         fe_img = gr.Textbox(label="image_b64")
         fe_sr = gr.Number(label="upscale_strength (0–1)", value=1.0)
         fe_rt = gr.Number(label="retouch_strength (0–1)", value=0.4)
         fe_out = gr.JSON(label="result")
-        gr.Button("Run").click(api_face_enhance, inputs=[fe_img, fe_sr, fe_rt], outputs=[fe_out])
+        gr.Button("Run").click(api_face_enhance, inputs=[fe_img, fe_sr, fe_rt], outputs=[fe_out], api_name="api_face_enhance")
 
     with gr.Tab("Background Blur"):
         bb_img = gr.Textbox(label="image_b64")
@@ -507,7 +507,7 @@ with gr.Blocks(title="SnapStudio AI — GPU Backend") as demo:
         bb_depth = gr.Checkbox(label="use_depth (better quality)", value=True)
         bb_subj = gr.Textbox(label="subject_type (general/person)", value="general")
         bb_out = gr.JSON(label="result")
-        gr.Button("Run").click(api_bg_blur, inputs=[bb_img, bb_amount, bb_depth, bb_subj], outputs=[bb_out])
+        gr.Button("Run").click(api_bg_blur, inputs=[bb_img, bb_amount, bb_depth, bb_subj], outputs=[bb_out], api_name="api_bg_blur")
 
     # ── AI Transform ──────────────────────────────────────────────────────────
     with gr.Tab("Background Swap"):
@@ -516,20 +516,20 @@ with gr.Blocks(title="SnapStudio AI — GPU Backend") as demo:
         bs_style = gr.Textbox(label="style_name", value="Portrait - clean studio")
         bs_var = gr.Number(label="num_variants", value=1)
         bs_out = gr.JSON(label="result")
-        gr.Button("Run").click(api_bg_swap, inputs=[bs_img, bs_subj, bs_style, bs_var], outputs=[bs_out])
+        gr.Button("Run").click(api_bg_swap, inputs=[bs_img, bs_subj, bs_style, bs_var], outputs=[bs_out], api_name="api_bg_swap")
 
     with gr.Tab("Style Filter"):
         sf_img = gr.Textbox(label="image_b64")
         sf_style = gr.Textbox(label="style_name", value="Anime")
         sf_str = gr.Number(label="strength", value=0.6)
         sf_out = gr.JSON(label="result")
-        gr.Button("Run").click(api_style_filter, inputs=[sf_img, sf_style, sf_str], outputs=[sf_out])
+        gr.Button("Run").click(api_style_filter, inputs=[sf_img, sf_style, sf_str], outputs=[sf_out], api_name="api_style_filter")
 
     with gr.Tab("Remove Object"):
         rm_img = gr.Textbox(label="image_b64")
         rm_mask = gr.Textbox(label="mask_b64")
         rm_out = gr.JSON(label="result")
-        gr.Button("Run").click(api_remove_object, inputs=[rm_img, rm_mask], outputs=[rm_out])
+        gr.Button("Run").click(api_remove_object, inputs=[rm_img, rm_mask], outputs=[rm_out], api_name="api_remove_object")
 
     with gr.Tab("Outpaint"):
         op_img = gr.Textbox(label="image_b64")
@@ -537,7 +537,7 @@ with gr.Blocks(title="SnapStudio AI — GPU Backend") as demo:
         op_amt = gr.Number(label="amount (pixels)", value=256)
         op_prompt = gr.Textbox(label="prompt hint (optional)", value="")
         op_out = gr.JSON(label="result")
-        gr.Button("Run").click(api_outpaint, inputs=[op_img, op_dir, op_amt, op_prompt], outputs=[op_out])
+        gr.Button("Run").click(api_outpaint, inputs=[op_img, op_dir, op_amt, op_prompt], outputs=[op_out], api_name="api_outpaint")
 
     # ── Generate ──────────────────────────────────────────────────────────────
     with gr.Tab("Text → Image"):
@@ -552,7 +552,7 @@ with gr.Blocks(title="SnapStudio AI — GPU Backend") as demo:
         t2i_out = gr.JSON(label="result")
         gr.Button("Generate").click(api_text2img,
             inputs=[t2i_prompt, t2i_neg, t2i_style, t2i_w, t2i_h, t2i_steps, t2i_seed, t2i_n],
-            outputs=[t2i_out])
+            outputs=[t2i_out], api_name="api_text2img")
 
 
 if __name__ == "__main__":
