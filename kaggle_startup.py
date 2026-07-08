@@ -80,7 +80,19 @@ else:
 # This starts the Gradio server and prints a public *.gradio.live URL.
 # Copy that URL and paste it into your Vercel app's "Backend URL" box.
 
+# Kill any stale Gradio process still holding a port from a previous run
+print("🔄 Clearing any stale server processes...")
+try:
+    import subprocess as _sp
+    _sp.run(["fuser", "-k", "7860/tcp", "7861/tcp", "7862/tcp"], capture_output=True)
+except Exception:
+    pass  # fuser may not be available — harmless
+
+import gradio as gr
+gr.close_all()  # close any in-process Gradio servers
+
 print("\n🚀 Starting SnapStudio AI backend...")
 print("   Waiting for URL (models download on first run — may take 5-10 minutes)...\n")
 
 exec(open("backend_app.py").read())
+

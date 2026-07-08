@@ -557,7 +557,6 @@ with gr.Blocks(title="SnapStudio AI — GPU Backend") as demo:
 
 if __name__ == "__main__":
     demo.launch(
-        share=True,              # generates *.gradio.live public URL
-        server_port=7860,
-        show_error=True,
+        share=True,       # generates *.gradio.live public URL
+        show_error=True,  # auto-selects a free port in 7860-7879
     )
