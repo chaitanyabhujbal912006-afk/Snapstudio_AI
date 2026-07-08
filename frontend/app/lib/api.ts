@@ -7,7 +7,9 @@
 // ── Core Gradio caller ────────────────────────────────────────────────────────
 
 async function gradioCall(baseUrl: string, fnName: string, payload: unknown[]): Promise<unknown[]> {
-  const isRemote = baseUrl.includes(".gradio.live");
+  // Any external (https) URL goes through the server-side proxy to avoid CORS
+  const isRemote = baseUrl.startsWith("https://") || baseUrl.includes(".gradio.live");
+
 
   let postRes;
   if (isRemote) {
@@ -45,9 +47,22 @@ async function gradioCall(baseUrl: string, fnName: string, payload: unknown[]): 
   if (!getRes.ok) throw new Error(`GET ${fnName} result failed: ${getRes.status}`);
   const text = await getRes.text();
 
-  const match = text.match(/data:\s*(\[[\s\S]*?\])\n\n/);
-  if (!match) throw new Error("Could not parse Gradio SSE response");
-  return JSON.parse(match[1]);
+  // Scan lines in reverse to find the last `data: [...]` line
+  const lines = text.split("\n");
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const line = lines[i].trim();
+    if (line.startsWith("data:")) {
+      const raw = line.slice(5).trim();
+      if (raw.startsWith("[")) {
+        try {
+          return JSON.parse(raw);
+        } catch {
+          // keep scanning
+        }
+      }
+    }
+  }
+  throw new Error(`Could not parse Gradio SSE response. Raw text: ${text.slice(0, 300)}`);
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
