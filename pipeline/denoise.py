@@ -1,9 +1,11 @@
 """
-AI-powered image denoising:
-  - Fast mode: OpenCV Non-Local Means (NLM) — CPU, ~0.5–2s
-  - Strong mode: median-based + bilateral stack — CPU, ~1–3s
+Image denoising (CPU-only, no AI model required):
+  - light:    OpenCV median + bilateral filter         (~0.2s)
+  - balanced: Non-Local Means on L channel (LAB space) (~0.5–2s)
+  - strong:   Multi-pass: median → NLM → bilateral     (~1–3s)
 
-No AI model needed — OpenCV denoising is excellent for practical use.
+All modes optionally work in LAB space to denoise only luminance,
+preventing color channel bleed that often makes denoised images look "painted".
 """
 
 import cv2
@@ -53,7 +55,9 @@ def denoise(
         if preserve_color:
             lab = cv2.cvtColor(img, cv2.COLOR_RGB2LAB)
             l, a, b = cv2.split(lab)
-            l = cv2.fastNlMeansDenoising(l, None, h=min(h * 1.5, 40), templateWindowSize=7, searchWindowSize=21)
+            # Clamp h to valid int range expected by fastNlMeansDenoising
+            h_strong = int(np.clip(h * 1.5, 1, 40))
+            l = cv2.fastNlMeansDenoising(l, None, h=h_strong, templateWindowSize=7, searchWindowSize=21)
             # Also lightly smooth color channels
             a = cv2.bilateralFilter(a, d=5, sigmaColor=20, sigmaSpace=20)
             b_ch = cv2.bilateralFilter(b, d=5, sigmaColor=20, sigmaSpace=20)
