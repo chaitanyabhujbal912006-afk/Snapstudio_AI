@@ -1,8 +1,8 @@
 # SnapStudio AI 🎨
 
-**AI-powered photo editing — custom frontend on Vercel, GPU backend on Kaggle.**
+**AI-powered photo editing — Next.js frontend on Vercel, GPU backend on Kaggle.**
 
-Upload a photo and get studio-quality results instantly: auto-enhance, swap backgrounds, apply art styles, or remove objects — all powered by free GPU on Kaggle.
+Upload a photo and get studio-quality results instantly: auto-enhance, swap backgrounds, apply art styles, remove objects, or generate from text — all powered by free GPU on Kaggle.
 
 ---
 
@@ -10,10 +10,14 @@ Upload a photo and get studio-quality results instantly: auto-enhance, swap back
 
 | Mode | What it does | Speed |
 |---|---|---|
-| ✨ Auto-Enhance | Fixes lighting, color, contrast & sharpness | ~1–2 sec |
+| ✨ Auto-Enhance | Fixes lighting, color, contrast, exposure & sharpness | ~1–2 sec |
 | 🖼️ Background Swap | Replaces background with AI-generated scene | ~1–2 min |
-| 🎨 Style Filter | Transforms photo into anime, painting, etc. | ~30–60 sec |
+| 🎨 Style Filter | Transforms photo into anime, painting, sketch, etc. | ~30–60 sec |
 | 🧹 Object Removal | Paint over anything to erase it | ~2–4 min |
+| 🖌️ Text-to-Image | Generate images from a text prompt (SDXL-Turbo) | ~10–20 sec |
+| 🔍 Upscale | 2× or 4× AI super-resolution (Swin2SR) | ~15–60 sec |
+| 🎭 Portrait Retouch | Skin smoothing, clarity, vibrance, shadow lift | ~0.2 sec |
+| 🌟 Creative Effects | HDR, vignette, film grain, bloom, tilt-shift, etc. | ~0.5 sec |
 
 ---
 
@@ -22,14 +26,14 @@ Upload a photo and get studio-quality results instantly: auto-enhance, swap back
 ```
 [User Browser]
      ↓  visits
-[Vercel Frontend] ─── HTML/CSS/JS, always-on, free
-     ↓  API calls to
+[Vercel Frontend] ─── Next.js App Router, always-on, free
+     ↓  API calls via server-side proxy (/api/proxy)
 [Kaggle GPU Backend] ─── Python + Gradio, free GPU T4
      ↓  runs
-[AI Pipeline] ─── Stable Diffusion, ControlNet, LCM-LoRA
+[AI Pipeline] ─── Stable Diffusion, ControlNet, LCM-LoRA, Swin2SR
 ```
 
-- **Frontend** (`/frontend/`): Pure HTML + CSS + JS. Deployed to Vercel for free. Always online.
+- **Frontend** (`/frontend/`): Next.js (App Router). Deployed to Vercel for free. All backend calls go through a server-side proxy route to avoid CORS.
 - **Backend** (`kaggle_notebook.ipynb`): Python + Gradio app with the full AI pipeline. Run on Kaggle's free GPU. Exposes a public `*.gradio.live` URL.
 - You connect them by pasting the backend URL into the frontend's input box.
 
@@ -58,32 +62,53 @@ Upload a photo and get studio-quality results instantly: auto-enhance, swap back
 3. Set **Root Directory** to `frontend`
 4. Click **Deploy** — done!
 
+### 4. Run Frontend Locally
+```bash
+cd frontend
+npm install
+npm run dev   # http://localhost:3000
+```
+
 ---
 
 ## 📁 Project Structure
 
 ```
 Snapstudio_AI/
-├── frontend/                  # 🖥️ Vercel static frontend
-│   ├── index.html             # Main app UI
-│   ├── style.css              # Styles
-│   └── app.js                 # API calls & UI logic
+├── frontend/                  # 🖥️ Next.js frontend (Vercel)
+│   ├── app/                   # App Router pages & components
+│   │   ├── page.tsx           # Main app entry
+│   │   ├── layout.tsx         # Root layout
+│   │   ├── api/proxy/         # Server-side proxy (avoids browser CORS)
+│   │   └── components/        # Tab components (EnhanceTab, StyleTab, …)
+│   ├── public/                # Static assets
+│   └── package.json
 │
-├── pipeline/                  # ⚙️ AI pipeline modules (used by backend)
-│   ├── enhance.py             # Auto-enhance (OpenCV, no AI model)
+├── pipeline/                  # ⚙️ AI pipeline modules (run on Kaggle backend)
+│   ├── enhance.py             # Auto-enhance: white balance, exposure, CLAHE
+│   ├── denoise.py             # Image denoising: NLM, bilateral, multi-pass
+│   ├── retouch.py             # Portrait retouching: smoothing, clarity, vibrance
+│   ├── effects.py             # Creative effects: HDR, vignette, film grain, tilt-shift…
+│   ├── color_grade.py         # Color grading: curves, LUT, split-tone
+│   ├── face_enhance.py        # Face detection + enhancement
 │   ├── segment.py             # Subject segmentation (rembg)
-│   ├── depth_edges.py         # Depth map extraction
-│   ├── generate_bg.py         # Background generation (SD + ControlNet)
-│   ├── composite.py           # Compositing subject onto background
+│   ├── depth_edges.py         # Depth map extraction (MiDaS)
+│   ├── generate_bg.py         # Background generation (SD 1.5 + ControlNet + LCM-LoRA)
+│   ├── bg_blur.py             # Background blur (bokeh simulation)
+│   ├── composite.py           # Composite subject onto new background
 │   ├── harmonize.py           # Shadow & tone harmonization
 │   ├── style_filter.py        # Style transfer (SD img2img + LCM-LoRA)
-│   └── inpaint.py             # Object removal (SD inpainting)
+│   ├── inpaint.py             # Object removal (SD inpainting)
+│   ├── outpaint.py            # Canvas extension / outpainting
+│   ├── text2img.py            # Text-to-image (SDXL-Turbo)
+│   └── upscale.py             # AI upscaling 2×/4× (Swin2SR, tiled)
 │
 ├── presets/
 │   ├── styles.py              # Background style prompt templates
 │   └── style_filters.py       # Art style prompt templates
 │
 ├── kaggle_notebook.ipynb      # 🏃 Run this on Kaggle for the GPU backend
+├── kaggle_startup.py          # Backend startup & Gradio interface definition
 ├── app.py                     # (Legacy) Gradio-only app for HF Spaces
 └── requirements.txt           # Python dependencies
 ```
@@ -102,12 +127,12 @@ Snapstudio_AI/
 
 | Layer | Technology |
 |---|---|
-| Frontend | HTML, CSS, JavaScript (vanilla) |
+| Frontend | Next.js 14 (App Router), TypeScript, CSS Modules |
 | Hosting | Vercel (free tier) |
-| Backend | Python, Gradio, FastAPI |
+| Backend | Python 3.10, Gradio, FastAPI |
 | GPU Compute | Kaggle (free T4 GPU) |
-| AI Models | Stable Diffusion 1.5, ControlNet Depth, LCM-LoRA, SD Inpainting |
-| Image Processing | OpenCV, PIL, rembg |
+| AI Models | Stable Diffusion 1.5, SDXL-Turbo, ControlNet Depth, LCM-LoRA, SD Inpainting, Swin2SR |
+| Image Processing | OpenCV, PIL/Pillow, NumPy, rembg |
 
 ---
 
