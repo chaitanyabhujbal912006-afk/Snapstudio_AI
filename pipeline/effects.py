@@ -220,3 +220,54 @@ def apply_orton_glow(image: Image.Image, strength: float = 0.4) -> Image.Image:
     orton = img * blurred / 255.0
     result = img * (1 - strength) + orton * strength
     return Image.fromarray(np.clip(result, 0, 255).astype(np.uint8))
+
+
+# ── Tilt-Shift ────────────────────────────────────────────────────────────────
+
+def apply_tilt_shift(
+    image: Image.Image,
+    focus_center: float = 0.5,   # 0.0 = top, 1.0 = bottom
+    focus_band: float = 0.25,    # fraction of height kept sharp (0.1 = narrow, 0.5 = wide)
+    blur_strength: int = 21,     # radius of background blur (must be odd)
+    saturation_boost: float = 1.2,  # slight saturation punch typical of miniature effect
+) -> Image.Image:
+    """
+    Tilt-Shift / Miniature Effect.
+
+    Blurs the top and bottom of the image while keeping a sharp horizontal
+    band centered at `focus_center`. The sharp-to-blurred transition is
+    feathered with a smooth gradient mask, simulating a real tilt-shift lens.
+    A subtle saturation increase reinforces the toy/miniature look.
+    """
+    img = np.array(image.convert("RGB"))
+    h, w = img.shape[:2]
+
+    # ── Blur the whole image ──────────────────────────────────────────────────
+    k = blur_strength if blur_strength % 2 == 1 else blur_strength + 1
+    blurred = cv2.GaussianBlur(img.astype(np.float32), (k, k), sigmaX=k * 0.4)
+
+    # ── Build vertical focus gradient mask ───────────────────────────────────
+    ys = np.linspace(0.0, 1.0, h)
+    center = focus_center
+    half_band = focus_band / 2.0
+
+    # Linear ramp: 1.0 inside the band, falling to 0 outside
+    upper_ramp = np.clip((ys - (center - half_band)) / (half_band * 0.5), 0, 1)
+    lower_ramp = np.clip(((center + half_band) - ys) / (half_band * 0.5), 0, 1)
+    mask_1d = np.minimum(upper_ramp, lower_ramp)  # 1 = sharp, 0 = blurred
+
+    # Smooth with a Gaussian for natural feathering
+    mask_1d = cv2.GaussianBlur(mask_1d.astype(np.float32).reshape(1, h), (1, 51), sigmaX=25).flatten()
+    mask = mask_1d[:, np.newaxis, np.newaxis]   # (H, 1, 1) for broadcasting
+
+    # ── Composite: sharp * mask + blurred * (1-mask) ──────────────────────────
+    composite = (img.astype(np.float32) * mask + blurred * (1 - mask))
+    composite = np.clip(composite, 0, 255).astype(np.uint8)
+
+    # ── Saturation boost for the miniature look ───────────────────────────────
+    if saturation_boost != 1.0:
+        hsv = cv2.cvtColor(composite, cv2.COLOR_RGB2HSV).astype(np.float32)
+        hsv[..., 1] = np.clip(hsv[..., 1] * saturation_boost, 0, 255)
+        composite = cv2.cvtColor(hsv.astype(np.uint8), cv2.COLOR_HSV2RGB)
+
+    return Image.fromarray(composite)
