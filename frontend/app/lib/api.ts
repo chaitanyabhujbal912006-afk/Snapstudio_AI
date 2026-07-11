@@ -10,8 +10,8 @@ async function gradioCall(baseUrl: string, fnName: string, payload: unknown[]): 
   // Any external (https) URL goes through the server-side proxy to avoid CORS
   const isRemote = baseUrl.startsWith("https://") || baseUrl.includes(".gradio.live");
 
-
-  let postRes;
+  // ── POST: kick off the job and get an event_id ────────────────────────────
+  let postRes: Response;
   if (isRemote) {
     postRes = await fetch("/api/proxy", {
       method: "POST",
@@ -20,31 +20,54 @@ async function gradioCall(baseUrl: string, fnName: string, payload: unknown[]): 
         "x-target-url": `${baseUrl}/call/${fnName}`
       },
       body: JSON.stringify({ data: payload }),
+      signal: AbortSignal.timeout(20_000),   // 20 s to get the event_id
     });
   } else {
     postRes = await fetch(`${baseUrl}/call/${fnName}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ data: payload }),
+      signal: AbortSignal.timeout(20_000),
     });
   }
 
-  if (!postRes.ok) throw new Error(`POST ${fnName} failed: ${postRes.status}`);
-  const { event_id } = await postRes.json();
+  if (!postRes.ok) {
+    let msg = `POST ${fnName} failed: HTTP ${postRes.status}`;
+    try {
+      const errBody = await postRes.json();
+      if (errBody.detail) msg += ` — ${errBody.detail}`;
+      else if (errBody.error) msg += ` — ${errBody.error}`;
+    } catch { /* not JSON */ }
+    throw new Error(msg);
+  }
 
-  let getRes;
+  const { event_id } = await postRes.json();
+  if (!event_id) throw new Error(`No event_id returned by ${fnName}`);
+
+  // ── GET: stream the SSE result back (may take several minutes for GPU ops) ─
+  let getRes: Response;
   if (isRemote) {
     getRes = await fetch("/api/proxy", {
       method: "GET",
       headers: {
         "x-target-url": `${baseUrl}/call/${fnName}/${event_id}`
       }
+      // No AbortSignal timeout here — GPU jobs can take 1-4+ minutes
     });
   } else {
     getRes = await fetch(`${baseUrl}/call/${fnName}/${event_id}`);
   }
 
-  if (!getRes.ok) throw new Error(`GET ${fnName} result failed: ${getRes.status}`);
+  if (!getRes.ok) {
+    let msg = `GET ${fnName} result failed: HTTP ${getRes.status}`;
+    try {
+      const errBody = await getRes.json();
+      if (errBody.detail) msg += ` — ${errBody.detail}`;
+      else if (errBody.error) msg += ` — ${errBody.error}`;
+    } catch { /* not JSON */ }
+    throw new Error(msg);
+  }
+
   const text = await getRes.text();
 
   // Scan lines in reverse to find the last `data: [...]` line
@@ -64,6 +87,7 @@ async function gradioCall(baseUrl: string, fnName: string, payload: unknown[]): 
   }
   throw new Error(`Could not parse Gradio SSE response. Raw text: ${text.slice(0, 300)}`);
 }
+
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 

@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 
-export const runtime = "nodejs"; // required for streaming/long-lived connections
-export const maxDuration = 120;   // 2-minute timeout for GPU operations
+export const runtime = "nodejs";     // required for streaming/long-lived connections
+export const maxDuration = 300;      // 5-min ceiling — covers GPU operations (bg-swap ~2min, inpaint ~4min)
+export const dynamic = "force-dynamic"; // never cache proxy responses
 
 export async function POST(request: Request) {
   try {
@@ -24,7 +25,7 @@ export async function POST(request: Request) {
     if (!response.ok) {
       const errBody = await response.text().catch(() => "");
       return NextResponse.json(
-        { error: `Target returned ${response.status}`, detail: errBody },
+        { error: `Backend returned HTTP ${response.status}`, detail: errBody },
         { status: response.status }
       );
     }
@@ -33,6 +34,7 @@ export async function POST(request: Request) {
     return NextResponse.json(data);
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error);
+    console.error("[proxy POST]", msg);
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
@@ -44,31 +46,41 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Missing x-target-url header" }, { status: 400 });
     }
 
-    // Must send Accept: text/event-stream so Gradio returns SSE format
-    const response = await fetch(targetUrl, {
+    // Stream the Gradio SSE response directly to the client.
+    // Buffering with response.text() caused Vercel timeouts on long GPU jobs.
+    const upstream = await fetch(targetUrl, {
       headers: {
         "Accept": "text/event-stream",
+        "Cache-Control": "no-cache",
       },
     });
 
-    if (!response.ok) {
-      const errBody = await response.text().catch(() => "");
+    if (!upstream.ok) {
+      const errBody = await upstream.text().catch(() => "");
       return NextResponse.json(
-        { error: `Target returned ${response.status}`, detail: errBody },
-        { status: response.status }
+        { error: `Backend returned HTTP ${upstream.status}`, detail: errBody },
+        { status: upstream.status }
       );
     }
 
-    // Read full SSE body and return as plain text
-    const data = await response.text();
-    return new Response(data, {
+    if (!upstream.body) {
+      return NextResponse.json({ error: "No body in upstream SSE response" }, { status: 502 });
+    }
+
+    // Pipe the ReadableStream straight through — zero buffering, no timeout risk.
+    return new Response(upstream.body, {
+      status: 200,
       headers: {
-        "Content-Type": "text/plain; charset=utf-8",
-        "Cache-Control": "no-store, max-age=0",
+        "Content-Type": "text/event-stream; charset=utf-8",
+        "Cache-Control": "no-cache, no-transform",
+        "X-Accel-Buffering": "no",   // disable nginx buffering on Vercel edge
+        "Transfer-Encoding": "chunked",
       },
     });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error);
+    console.error("[proxy GET]", msg);
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
+

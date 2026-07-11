@@ -68,18 +68,25 @@ export function BackendProvider({ children }: { children: ReactNode }) {
             "x-target-url": `${trimmed}/call/api_get_presets`,
           },
           body: JSON.stringify({ data: [] }),
+          signal: AbortSignal.timeout(20_000),  // 20s — fail fast if backend unreachable
         });
       } else {
         postRes = await fetch(`${trimmed}/call/api_get_presets`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ data: [] }),
+          signal: AbortSignal.timeout(20_000),
         });
       }
 
       if (!postRes.ok) {
-        const errText = await postRes.text().catch(() => "");
-        throw new Error(`POST failed ${postRes.status}: ${errText}`);
+        let errMsg = `HTTP ${postRes.status}`;
+        try {
+          const body = await postRes.json();
+          if (body.detail) errMsg += `: ${body.detail}`;
+          else if (body.error) errMsg += `: ${body.error}`;
+        } catch { /* not JSON */ }
+        throw new Error(`Backend connection failed — ${errMsg}`);
       }
 
       const postJson = await postRes.json();
