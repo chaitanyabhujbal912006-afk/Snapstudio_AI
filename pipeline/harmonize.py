@@ -11,7 +11,7 @@ from PIL import Image, ImageFilter, ImageDraw
 
 
 def add_shadow(composited: Image.Image, mask: Image.Image,
-                offset=(0, 25), blur_radius: int = 20, opacity: int = 90) -> Image.Image:
+                offset=(0, 20), blur_radius: int = 25, opacity: int = 100) -> Image.Image:
     """Adds a soft drop shadow beneath the product, using its silhouette."""
     shadow_layer = Image.new("RGBA", composited.size, (0, 0, 0, 0))
 
@@ -50,7 +50,7 @@ def match_tone(product_region: np.ndarray, background: np.ndarray) -> np.ndarray
     for c in range(3):
         p_mean, p_std = result[..., c].mean(), result[..., c].std() + 1e-6
         b_mean, b_std = background[..., c].mean(), background[..., c].std() + 1e-6
-        result[..., c] = (result[..., c] - p_mean) * (b_std / p_std) * 0.3 + p_mean  # 0.3 = subtle strength
+        result[..., c] = (result[..., c] - p_mean) * (b_std / p_std) * 0.5 + p_mean  # 0.5 = noticeable but not extreme
     return np.clip(result, 0, 255).astype(np.uint8)
 
 

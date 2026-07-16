@@ -68,23 +68,23 @@ def release_pipeline() -> None:
 
 
 def generate_background(depth_map: Image.Image, prompt: str, negative_prompt: str,
-                         steps: int = 6, guidance_scale: float = 1.5, seed: int = None) -> Image.Image:
+                         steps: int = 8, guidance_scale: float = 2.0, seed: int = None) -> Image.Image:
     pipe = _load_pipeline()
     device = next(pipe.unet.parameters()).device.type
 
     orig_size = depth_map.size
     w, h = orig_size
 
-    # Scale so that the maximum dimension is 512, rounded to the nearest multiple of 8
-    max_dim = 512
+    # Work at 768 for large images (better quality), 512 for small — always multiple of 8
+    max_dim = 768 if max(w, h) > 640 else 512
     scale = min(max_dim / w, max_dim / h)
     new_w = int(round((w * scale) / 8) * 8)
     new_h = int(round((h * scale) / 8) * 8)
     new_w = max(new_w, 8)
     new_h = max(new_h, 8)
 
-    # Downscale for fast inference
-    depth_map_resized = depth_map.resize((new_w, new_h), resample=Image.Resampling.LANCZOS)
+    # ControlNet requires RGB depth map
+    depth_resized = depth_map.resize((new_w, new_h), resample=Image.Resampling.LANCZOS).convert("RGB")
 
     generator = None
     if seed is not None:
@@ -94,24 +94,27 @@ def generate_background(depth_map: Image.Image, prompt: str, negative_prompt: st
         result = pipe(
             prompt=prompt,
             negative_prompt=negative_prompt,
-            image=depth_map_resized,
-            num_inference_steps=steps,
-            guidance_scale=guidance_scale,  # LCM works best with low guidance (1.0-2.0)
+            image=depth_resized,
+            num_inference_steps=steps,   # 8 steps = LCM quality sweet spot
+            guidance_scale=guidance_scale,
             generator=generator,
+            controlnet_conditioning_scale=0.75,  # relax depth adherence slightly for more natural BG
         )
     except torch.cuda.OutOfMemoryError:
-        # Retry with attention slicing as fallback
+        # Fallback: drop to 512, enable attention slicing
         pipe.enable_attention_slicing()
         torch.cuda.empty_cache()
+        depth_sm = depth_map.resize((512, 512), resample=Image.Resampling.LANCZOS).convert("RGB")
         result = pipe(
             prompt=prompt,
             negative_prompt=negative_prompt,
-            image=depth_map_resized,
+            image=depth_sm,
             num_inference_steps=steps,
             guidance_scale=guidance_scale,
             generator=generator,
+            controlnet_conditioning_scale=0.75,
         )
 
-    # Scale back to original size
+    # Scale back to original size with high-quality resampling
     rescaled_result = result.images[0].resize(orig_size, resample=Image.Resampling.LANCZOS)
     return rescaled_result

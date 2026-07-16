@@ -292,20 +292,31 @@ def api_bg_swap(
         free_gpu_models(keep="bg_swap")
         img = _b64_to_pil(image_b64).convert("RGB")
 
+        # ── Step 1: Segment subject (done once, shared across all variants) ──────
         session_type = "person" if subject_type == "Portrait / selfie" else "general"
         cutout, mask = segment_product(img, subject_type=session_type)
-        soft_mask = feather_mask(mask, blur_radius=3)
+        # Wider feather for natural, non-razor edges
+        soft_mask = feather_mask(mask, blur_radius=8)
+
+        # ── Step 2: Depth map — use the FULL image (not masked) ─────────────────
+        # Masking before depth extraction destroys scene structure context that
+        # ControlNet needs to generate a plausible background perspective.
         depth_map = get_depth_map(img)
-        depth_map = Image.composite(depth_map, Image.new("L", depth_map.size, 0), soft_mask)
 
         style = STYLES.get(style_name)
         if not style:
             return {"success": False, "error": f"Unknown style: {style_name}"}
 
+        # ── Step 3: Generate variants ────────────────────────────────────────────
         results = []
-        for i in range(max(1, min(int(num_variants), 4))):
-            bg = generate_background(depth_map=depth_map, prompt=style["prompt"],
-                                     negative_prompt=style["negative_prompt"], seed=42 + i)
+        n = max(1, min(int(num_variants), 4))
+        for i in range(n):
+            bg = generate_background(
+                depth_map=depth_map,
+                prompt=style["prompt"],
+                negative_prompt=style["negative_prompt"],
+                seed=42 + i,
+            )
             tone_matched = harmonize_tone(cutout, mask, bg)
             composited = composite(tone_matched, soft_mask, bg)
             final = add_shadow(composited, mask)
@@ -314,6 +325,7 @@ def api_bg_swap(
         return {"success": True, "images": results}
     except Exception as e:
         return {"success": False, "error": str(e)}
+
 
 
 def api_style_filter(
