@@ -13,51 +13,11 @@ This guide explains how to spin up your GPU-accelerated AI backend using **Kaggl
 
 ---
 
-### Phase 2: Run the Notebook cells in order
-You can import the fully-formatted notebook directly from the repository at [kaggle_notebook.ipynb](file:///c:/projects/snapstudio-ai/kaggle_notebook.ipynb) or copy-paste these 4 steps into separate cells:
+### Phase 2: Run Notebook Cells in Order
+You can import the fully-formatted notebook directly from the repository at [kaggle_notebook.ipynb](file:///c:/projects/snapstudio-ai/kaggle_notebook.ipynb) or copy-paste these 2 cells into your Kaggle notebook:
 
-#### 📥 Step 1: Clean and Install Dependencies
-This cell uninstalls conflicting pre-installed libraries, handles the Gradio 5.x system-wide override, avoids the broken `mediapipe` package, and installs all required weights-friendly pipelines.
-```python
-import subprocess, sys
-print('🧹 Cleaning up pre-installed conflicting packages...')
-try:
-    subprocess.check_call([sys.executable, '-m', 'pip', 'uninstall', '-y', 'onnxruntime', 'onnxruntime-gpu', 'rembg', 'numba', 'mediapipe', '-q'])
-except Exception as e:
-    print(f'Clean step warning: {e}')
-
-# Force-reinstall compatible Gradio and HuggingFace Hub versions
-print('📥 Force-reinstalling Gradio and HuggingFace Hub...')
-subprocess.check_call([
-    sys.executable, '-m', 'pip', 'install',
-    '--force-reinstall', '--no-deps',
-    'gradio>=4.40.0,<5.0.0',
-    'huggingface_hub>=0.20.0,<0.26.0',
-    '-q'
-])
-
-# Install remaining AI pipelines
-packages = [
-    'numpy>=2.0.0', 'numba>=0.60.0,<0.62.0',
-    'gradio>=4.40.0,<5.0.0',
-    'diffusers>=0.30.0', 'transformers>=4.46.3',
-    'accelerate>=0.26.0', 'peft>=0.8.0',
-    'controlnet-aux>=0.0.10', 'rembg>=2.0.68',
-    'onnxruntime>=1.19.0', 'opencv-python-headless>=4.8.0',
-    'scipy>=1.11.0', 'scikit-image>=0.21.0',
-    'huggingface_hub>=0.20.0,<0.26.0', 'safetensors>=0.4.0', 'xformers'
-]
-print('📥 Installing remaining dependencies (takes ~2-3 mins)...')
-subprocess.check_call([sys.executable, '-m', 'pip', 'install', *packages, '-q'])
-print('Done! Restarting kernel to apply updates...')
-import os; os._exit(0)
-```
-
-> [!NOTE]
-> Running this cell will automatically kill the session's current Python kernel. Don't worry — this is normal and necessary for Jupyter to register the updated NumPy, Gradio, and Numba modules. Proceed to **Step 2** once the kernel completes restarting.
-
-#### 🔄 Step 2: Clone and Sync Repository
-Syncs the codebase. Includes a robust self-healing logic that automatically cleans local conflicts and redownloads from scratch if git pull fails.
+#### 🔄 Step 1: Clone / Sync SnapStudio Repo
+This cell clones the repository on the first run, and pulls/syncs the latest changes automatically on subsequent runs with self-healing features in case of merge conflicts.
 ```python
 import os, subprocess, sys
 REPO_URL = 'https://github.com/chaitanyabhujbal912006-afk/Snapstudio_AI.git'
@@ -65,47 +25,40 @@ REPO_DIR = '/kaggle/working/snapstudio'
 
 if not os.path.exists(REPO_DIR):
     subprocess.check_call(['git', 'clone', REPO_URL, REPO_DIR, '--depth=1'])
-    print('Cloned!')
+    print('✅ Repository cloned successfully!')
 else:
     try:
         subprocess.check_call(['git', '-C', REPO_DIR, 'reset', '--hard'])
         subprocess.check_call(['git', '-C', REPO_DIR, 'clean', '-fd'])
         subprocess.check_call(['git', '-C', REPO_DIR, 'pull'])
-        print('Pulled latest!')
+        print('✅ Repository synchronized with latest changes!')
     except Exception as e:
-        print('Git pull failed, removing directory and cloning fresh...')
+        print('⚠️ Sync failed, recreating repository directory:', e)
         import shutil
         shutil.rmtree(REPO_DIR, ignore_errors=True)
         subprocess.check_call(['git', 'clone', REPO_URL, REPO_DIR, '--depth=1'])
-        print('Cloned fresh!')
+        print('✅ Clean repository cloned successfully!')
 
 os.chdir(REPO_DIR)
-sys.path.insert(0, REPO_DIR)
+if REPO_DIR not in sys.path:
+    sys.path.insert(0, REPO_DIR)
 print('Working dir:', os.getcwd())
 ```
 
-#### 🖥️ Step 3: Verify GPU Availability
-Verifies that PyTorch is accurately accessing your Nvidia T4 cores.
+#### 🚀 Step 2: Bootstrap Dependencies and Launch Backend
+This cell will clean conflicting preloader packages (such as conflicting ONNX runtime elements and broken MediaPipe versions), verify GPU acceleration (preferring GPU T4 x2 for optimum rendering speed), load the warm VRAM models cache, and launch the Gradio instance.
 ```python
-import torch
-if torch.cuda.is_available():
-    print('GPU:', torch.cuda.get_device_name(0))
-    print('VRAM:', round(torch.cuda.get_device_properties(0).total_memory/1e9,1), 'GB')
-else:
-    print('No GPU! Set Accelerator to GPU T4 x2 in Kaggle settings.')
-```
-
-#### 🚀 Step 4: Launch Backend API
-Runs the centralized launch script from the repo. This will start the Gradio API server, spin up the job queue, and output a public live proxy URL.
-```python
-# Step 4: Launch SnapStudio AI Backend
 import os, sys
 REPO_DIR = '/kaggle/working/snapstudio'
 os.chdir(REPO_DIR)
 if REPO_DIR not in sys.path:
     sys.path.insert(0, REPO_DIR)
+
+# Run the official startup bootstrapper
 exec(open(REPO_DIR + '/kaggle_startup.py').read())
 ```
+> [!NOTE]
+> When executing for the first time, model architectures are cached in parallel to make subsequent operations instant. The launching phase prints a public live url at the bottom.
 
 ---
 

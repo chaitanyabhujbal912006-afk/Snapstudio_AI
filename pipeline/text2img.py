@@ -62,21 +62,24 @@ STYLE_PRESETS = {
 }
 
 
+from pipeline.device_helper import get_device_for_pipeline
+
 def _load_t2i():
     global _t2i_pipe
     if _t2i_pipe is not None:
         return _t2i_pipe
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    dtype = torch.float16 if device == "cuda" else torch.float32
+    device = get_device_for_pipeline("t2i")
+    is_cuda = "cuda" in device
+    dtype = torch.float16 if is_cuda else torch.float32
 
     _t2i_pipe = AutoPipelineForText2Image.from_pretrained(
         "stabilityai/sdxl-turbo",
         torch_dtype=dtype,
-        variant="fp16" if device == "cuda" else None,
+        variant="fp16" if is_cuda else None,
     ).to(device)
 
-    if device == "cuda":
+    if is_cuda:
         _t2i_pipe.enable_xformers_memory_efficient_attention()
 
     return _t2i_pipe

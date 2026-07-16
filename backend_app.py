@@ -67,7 +67,13 @@ GPU_MODELS = {
 
 
 def free_gpu_models(keep: str = None):
-    """Unload all GPU models except the one we need next. Prevents OOM."""
+    """Unload GPU models dynamically to prevent OOM based on available GPUs."""
+    # If 2 or more GPUs are available (Kaggle GPU T4 x2), we have 2 x 15.6 GB = 31.2 GB of VRAM.
+    # We distribute models across devices using pipeline/device_helper.py and can safely 
+    # keep ALL models warm in VRAM for instant switching latency!
+    if torch.cuda.is_available() and torch.cuda.device_count() >= 2:
+        return
+
     cleared = False
 
     def clear(mod, attr):
@@ -80,10 +86,19 @@ def free_gpu_models(keep: str = None):
     if keep != "inpaint":    clear(inpaint_mod, "_pipe")
     if keep != "style":      clear(style_filter_mod, "_pipe")
     if keep != "bg_swap":    clear(bg_mod, "_pipe")
-    if keep != "upscale":
+    
+    # Swin2SR (upscale) is extremely lightweight (~800MB VRAM). Keep it loaded
+    # even when switching to prevent slow model init on face restoration requests,
+    # unless explicitly doing a clear all.
+    if keep == "clear_all":
+        clear(inpaint_mod, "_pipe")
+        clear(style_filter_mod, "_pipe")
+        clear(bg_mod, "_pipe")
         clear(upscale_mod, "_model")
         clear(upscale_mod, "_processor")
-    if keep != "t2i":        clear(t2i_mod, "_t2i_pipe")
+        clear(t2i_mod, "_t2i_pipe")
+    elif keep != "t2i":
+        clear(t2i_mod, "_t2i_pipe")
 
     if cleared:
         gc.collect()

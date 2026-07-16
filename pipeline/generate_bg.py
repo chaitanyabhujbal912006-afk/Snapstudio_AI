@@ -13,6 +13,7 @@ reduce peak VRAM usage by ~30%, preventing OOM on large images.
 import torch
 from diffusers import StableDiffusionControlNetPipeline, ControlNetModel, LCMScheduler
 from PIL import Image
+from pipeline.device_helper import get_device_for_pipeline
 
 _pipe = None
 
@@ -22,8 +23,9 @@ def _load_pipeline():
     if _pipe is not None:
         return _pipe
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    dtype = torch.float16 if device == "cuda" else torch.float32
+    device = get_device_for_pipeline("bg_swap")
+    is_cuda = "cuda" in device
+    dtype = torch.float16 if is_cuda else torch.float32
 
     controlnet = ControlNetModel.from_pretrained(
         "lllyasviel/sd-controlnet-depth",
@@ -41,10 +43,11 @@ def _load_pipeline():
     pipe.load_lora_weights("latent-consistency/lcm-lora-sdv1-5")
     pipe.scheduler = LCMScheduler.from_config(pipe.scheduler.config)
 
-    if device == "cuda":
-        # CPU offloading keeps only the active sub-model on GPU at any time,
-        # reducing peak VRAM by ~30% — crucial for large image inputs.
-        pipe.enable_model_cpu_offload()
+    if is_cuda:
+        # If we have dual GPUs, we have plenty of VRAM per GPU (15.6 GB) to hold the model,
+        # so we don't need CPU offloading (which slows down generation).
+        if torch.cuda.device_count() < 2:
+            pipe.enable_model_cpu_offload()
         pipe.enable_xformers_memory_efficient_attention()
     else:
         pipe.enable_attention_slicing()

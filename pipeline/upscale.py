@@ -12,6 +12,7 @@ from PIL import Image
 # AutoImageProcessor is the forward-compatible way to load Swin2SR processor
 # in transformers>=4.46 (Swin2SRImageProcessor still works but may warn)
 from transformers import AutoImageProcessor, Swin2SRForImageSuperResolution
+from pipeline.device_helper import get_device_for_pipeline
 
 _MODEL_4X = "caidas/swin2SR-realworld-sr-x4-64-bsrgan-psnr"
 _MODEL_2X = "caidas/swin2SR-compressed-sr-x2-64"
@@ -28,10 +29,11 @@ def _load_model(scale: int = 4):
         return _model, _processor
 
     _processor = AutoImageProcessor.from_pretrained(model_id)
-    device_type = "cuda" if torch.cuda.is_available() else "cpu"
+    device_type = get_device_for_pipeline("upscale")
+    is_cuda = "cuda" in device_type
     _model = Swin2SRForImageSuperResolution.from_pretrained(
         model_id,
-        torch_dtype=torch.float16 if device_type == "cuda" else torch.float32,
+        torch_dtype=torch.float16 if is_cuda else torch.float32,
     ).to(device_type)
     _model.eval()
     _loaded_scale = scale

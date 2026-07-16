@@ -121,7 +121,8 @@ def outpaint(
 
     neg_prompt = "artifacts, seam, blurry, distorted, watermark, text, low quality, extra objects"
 
-    generator = torch.Generator(device="cpu").manual_seed(seed)
+    device = next(pipe.unet.parameters()).device.type
+    generator = torch.Generator(device=device).manual_seed(seed)
 
     result = pipe(
         prompt=base_prompt,

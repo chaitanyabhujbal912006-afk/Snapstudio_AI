@@ -13,6 +13,7 @@ runs slower on CPU (roughly 2-4 minutes) -- flagged clearly in the UI.
 import torch
 from diffusers import StableDiffusionInpaintPipeline
 from PIL import Image
+from pipeline.device_helper import get_device_for_pipeline
 
 _pipe = None
 
@@ -22,8 +23,9 @@ def _load_pipeline():
     if _pipe is not None:
         return _pipe
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    dtype = torch.float16 if device == "cuda" else torch.float32
+    device = get_device_for_pipeline("inpaint")
+    is_cuda = "cuda" in device
+    dtype = torch.float16 if is_cuda else torch.float32
 
     pipe = StableDiffusionInpaintPipeline.from_pretrained(
         "runwayml/stable-diffusion-inpainting",
@@ -31,7 +33,7 @@ def _load_pipeline():
         safety_checker=None,
     ).to(device)
 
-    if device == "cuda":
+    if is_cuda:
         pipe.enable_xformers_memory_efficient_attention()
     else:
         pipe.enable_attention_slicing()

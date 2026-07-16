@@ -31,13 +31,15 @@ def _detect_faces(img_rgb: np.ndarray, padding: float = 0.35) -> List[Tuple[int,
 
     # Try DNN detector first (more accurate)
     try:
-        import urllib.request, os, tempfile
+        import urllib.request, os
+        weights_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "weights")
+        os.makedirs(weights_dir, exist_ok=True)
+        
         prototxt = "https://raw.githubusercontent.com/opencv/opencv/master/samples/dnn/face_detector/deploy.prototxt"
         caffemodel = "https://github.com/opencv/opencv_extra/raw/master/testdata/dnn/res10_300x300_ssd_iter_140000.caffemodel"
 
-        # These are cached on Kaggle after first run
-        proto_path = "/tmp/deploy.prototxt"
-        model_path = "/tmp/res10_300x300_ssd.caffemodel"
+        proto_path = os.path.join(weights_dir, "deploy.prototxt")
+        model_path = os.path.join(weights_dir, "res10_300x300_ssd.caffemodel")
 
         if not os.path.exists(proto_path):
             urllib.request.urlretrieve(prototxt, proto_path)

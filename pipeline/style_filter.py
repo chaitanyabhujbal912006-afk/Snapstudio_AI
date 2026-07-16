@@ -10,6 +10,7 @@ Reuses the same SD1.5 + LCM-LoRA combo as generate_bg.py for CPU speed.
 import torch
 from diffusers import StableDiffusionImg2ImgPipeline, LCMScheduler
 from PIL import Image
+from pipeline.device_helper import get_device_for_pipeline
 
 _pipe = None
 
@@ -19,8 +20,9 @@ def _load_pipeline():
     if _pipe is not None:
         return _pipe
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    dtype = torch.float16 if device == "cuda" else torch.float32
+    device = get_device_for_pipeline("style")
+    is_cuda = "cuda" in device
+    dtype = torch.float16 if is_cuda else torch.float32
 
     pipe = StableDiffusionImg2ImgPipeline.from_pretrained(
         "runwayml/stable-diffusion-v1-5",
@@ -31,7 +33,7 @@ def _load_pipeline():
     pipe.load_lora_weights("latent-consistency/lcm-lora-sdv1-5")
     pipe.scheduler = LCMScheduler.from_config(pipe.scheduler.config)
 
-    if device == "cuda":
+    if is_cuda:
         pipe.enable_xformers_memory_efficient_attention()
     else:
         pipe.enable_attention_slicing()
