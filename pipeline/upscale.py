@@ -15,7 +15,7 @@ from transformers import AutoImageProcessor, Swin2SRForImageSuperResolution
 from pipeline.device_helper import get_device_for_pipeline
 
 _MODEL_4X = "caidas/swin2SR-realworld-sr-x4-64-bsrgan-psnr"
-_MODEL_2X = "caidas/swin2SR-compressed-sr-x2-64"
+_MODEL_2X = "caidas/swin2SR-classical-sr-x2-64"
 
 _model = None
 _processor = None
