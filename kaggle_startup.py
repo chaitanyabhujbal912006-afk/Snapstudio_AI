@@ -24,8 +24,9 @@ except Exception as e:
 
 packages = [
     "numpy>=2.0.0",
-    "numba>=0.60.0",  # Re-install numba to ensure binary compatibility with installed NumPy 2.x
-    "gradio>=4.40.0",
+    "numba>=0.60.0,<0.62.0",    # cuml/cudf on Kaggle require <0.62
+    # Force Gradio 4.x — Kaggle ships Gradio 5.x system-wide, we must override it
+    "gradio>=4.40.0,<5.0.0",
     "diffusers>=0.30.0",
     "transformers>=4.46.3",
     "accelerate>=0.26.0",
@@ -36,12 +37,21 @@ packages = [
     "opencv-python-headless>=4.8.0",
     "scipy>=1.11.0",
     "scikit-image>=0.21.0",
-    "huggingface_hub>=0.20.0",
+    # huggingface_hub>=0.27 removed HfFolder which Gradio 4.x needs — pin below that
+    "huggingface_hub>=0.20.0,<0.26.0",
     "safetensors>=0.4.0",
     "xformers",   # memory-efficient attention for GPU
 ]
 
 print("📥 Installing dependencies...")
+# --force-reinstall ensures our gradio<5 overrides Kaggle's system Gradio 5.x
+subprocess.check_call([
+    sys.executable, "-m", "pip", "install",
+    "--force-reinstall", "--no-deps",
+    "gradio>=4.40.0,<5.0.0",
+    "huggingface_hub>=0.20.0,<0.26.0",
+    "-q"
+])
 subprocess.check_call([sys.executable, "-m", "pip", "install", *packages, "-q"])
 print("✅ Dependencies installed")
 
