@@ -6,19 +6,20 @@ import { Wifi, WifiOff, Loader2, Zap } from "lucide-react";
 import { useBackend } from "@/app/context/BackendContext";
 
 export default function Header() {
-  const { isConnected, isConnecting, connect } = useBackend();
+  const { isConnected, isConnecting, connect, connectionError } = useBackend();
   const [inputUrl, setInputUrl] = useState("");
-  const [error, setError] = useState("");
+  const [localError, setLocalError] = useState("");
 
   const handleConnect = async () => {
     if (!inputUrl.trim()) {
-      setError("Please enter a backend URL");
+      setLocalError("Please enter a backend URL");
       return;
     }
-    setError("");
-    const ok = await connect(inputUrl.trim());
-    if (!ok) setError("Connection failed — check the URL and try again");
+    setLocalError("");
+    await connect(inputUrl.trim());
   };
+
+  const displayError = localError || connectionError;
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50">
@@ -90,13 +91,13 @@ export default function Header() {
               </button>
             </div>
           </div>
-          {error && (
+          {displayError && (
             <motion.p
               initial={{ opacity: 0, y: -4 }}
               animate={{ opacity: 1, y: 0 }}
               className="text-xs text-red-400 mr-1"
             >
-              {error}
+              {displayError}
             </motion.p>
           )}
         </motion.div>

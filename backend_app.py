@@ -556,7 +556,13 @@ with gr.Blocks(title="SnapStudio AI — GPU Backend") as demo:
 
 
 if __name__ == "__main__":
+    demo.queue(max_size=20)  # enable job queue so concurrent requests don't fail
     demo.launch(
-        share=True,       # generates *.gradio.live public URL
-        show_error=True,  # auto-selects a free port in 7860-7879
+        server_name="0.0.0.0",   # bind to all interfaces — required on Kaggle
+        server_port=7860,
+        share=True,              # generates *.gradio.live public URL
+        show_error=True,
+        debug=False,
+        show_api=True,           # expose /docs API reference page
+        allowed_paths=[],
     )

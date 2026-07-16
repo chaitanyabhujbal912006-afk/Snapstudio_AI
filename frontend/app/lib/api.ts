@@ -2,32 +2,42 @@
  * SnapStudio AI — Gradio API Client
  * Talks to the Kaggle backend via Gradio's SSE API.
  * All images are transferred as base64 data URIs.
+ *
+ * ── Flow ──────────────────────────────────────────────────────────────────────
+ *  1. POST /call/<fn>        → backend queues the job, returns { event_id }
+ *  2. GET  /call/<fn>/<id>   → backend streams SSE until job is done
+ *
+ * Remote (*.gradio.live) URLs go through /api/proxy to avoid CORS.
+ * Local (http://localhost:*) URLs are called directly from the browser.
  */
 
 // ── Core Gradio caller ────────────────────────────────────────────────────────
 
 async function gradioCall(baseUrl: string, fnName: string, payload: unknown[]): Promise<unknown[]> {
-  // Any external (https) URL goes through the server-side proxy to avoid CORS
-  const isRemote = baseUrl.startsWith("https://") || baseUrl.includes(".gradio.live");
+  const isRemote =
+    baseUrl.startsWith("https://") ||
+    baseUrl.includes(".gradio.live") ||
+    baseUrl.includes("gradio.app");
 
-  // ── POST: kick off the job and get an event_id ────────────────────────────
+  // ── STEP 1: POST — kick off the job, get back an event_id ────────────────
   let postRes: Response;
+
   if (isRemote) {
     postRes = await fetch("/api/proxy", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-target-url": `${baseUrl}/call/${fnName}`
+        "x-target-url": `${baseUrl}/call/${fnName}`,
       },
       body: JSON.stringify({ data: payload }),
-      signal: AbortSignal.timeout(20_000),   // 20 s to get the event_id
+      signal: AbortSignal.timeout(30_000), // 30 s to get event_id
     });
   } else {
     postRes = await fetch(`${baseUrl}/call/${fnName}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ data: payload }),
-      signal: AbortSignal.timeout(20_000),
+      signal: AbortSignal.timeout(30_000),
     });
   }
 
@@ -41,18 +51,21 @@ async function gradioCall(baseUrl: string, fnName: string, payload: unknown[]): 
     throw new Error(msg);
   }
 
-  const { event_id } = await postRes.json();
-  if (!event_id) throw new Error(`No event_id returned by ${fnName}`);
+  const postJson = await postRes.json();
+  const event_id: string = postJson.event_id;
+  if (!event_id) throw new Error(`No event_id returned by ${fnName} — is the backend running?`);
 
-  // ── GET: stream the SSE result back (may take several minutes for GPU ops) ─
+  // ── STEP 2: GET — stream the SSE until the job completes ─────────────────
   let getRes: Response;
+
   if (isRemote) {
+    // No AbortSignal timeout here — GPU jobs can take 1–4+ minutes.
+    // Vercel proxy maxDuration=300s is the effective ceiling.
     getRes = await fetch("/api/proxy", {
       method: "GET",
       headers: {
-        "x-target-url": `${baseUrl}/call/${fnName}/${event_id}`
-      }
-      // No AbortSignal timeout here — GPU jobs can take 1-4+ minutes
+        "x-target-url": `${baseUrl}/call/${fnName}/${event_id}`,
+      },
     });
   } else {
     getRes = await fetch(`${baseUrl}/call/${fnName}/${event_id}`);
@@ -70,7 +83,7 @@ async function gradioCall(baseUrl: string, fnName: string, payload: unknown[]): 
 
   const text = await getRes.text();
 
-  // Scan lines in reverse to find the last `data: [...]` line
+  // Scan lines in reverse for the last `data: [...]` line (Gradio SSE format)
   const lines = text.split("\n");
   for (let i = lines.length - 1; i >= 0; i--) {
     const line = lines[i].trim();
@@ -85,7 +98,12 @@ async function gradioCall(baseUrl: string, fnName: string, payload: unknown[]): 
       }
     }
   }
-  throw new Error(`Could not parse Gradio SSE response. Raw text: ${text.slice(0, 300)}`);
+
+  // Helpful error message with raw output snippet for debugging
+  throw new Error(
+    `Could not parse Gradio SSE response for ${fnName}.\n` +
+    `Raw output (first 500 chars): ${text.slice(0, 500)}`
+  );
 }
 
 
@@ -103,19 +121,23 @@ export function fileToBase64(file: File): Promise<string> {
 }
 
 function single(baseUrl: string, fn: string, payload: unknown[]): Promise<ApiResult<string>> {
-  return gradioCall(baseUrl, fn, payload).then(([r]) => {
-    const res = r as { success: boolean; image?: string; error?: string };
-    if (!res.success) return { success: false as const, error: res.error ?? "Unknown error" };
-    return { success: true as const, data: res.image! };
-  }).catch(e => ({ success: false as const, error: String(e) }));
+  return gradioCall(baseUrl, fn, payload)
+    .then(([r]) => {
+      const res = r as { success: boolean; image?: string; error?: string };
+      if (!res.success) return { success: false as const, error: res.error ?? "Unknown error" };
+      return { success: true as const, data: res.image! };
+    })
+    .catch((e) => ({ success: false as const, error: String(e) }));
 }
 
 function multi(baseUrl: string, fn: string, payload: unknown[]): Promise<ApiResult<string[]>> {
-  return gradioCall(baseUrl, fn, payload).then(([r]) => {
-    const res = r as { success: boolean; images?: string[]; error?: string };
-    if (!res.success) return { success: false as const, error: res.error ?? "Unknown error" };
-    return { success: true as const, data: res.images! };
-  }).catch(e => ({ success: false as const, error: String(e) }));
+  return gradioCall(baseUrl, fn, payload)
+    .then(([r]) => {
+      const res = r as { success: boolean; images?: string[]; error?: string };
+      if (!res.success) return { success: false as const, error: res.error ?? "Unknown error" };
+      return { success: true as const, data: res.images! };
+    })
+    .catch((e) => ({ success: false as const, error: String(e) }));
 }
 
 // ── Presets ───────────────────────────────────────────────────────────────────
