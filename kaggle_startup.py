@@ -37,6 +37,7 @@ packages = [
     "opencv-python-headless>=4.8.0",
     "scipy>=1.11.0",
     "scikit-image>=0.21.0",
+    "mediapipe>=0.10.0",
     # huggingface_hub>=0.27 removed HfFolder which Gradio 4.x needs — pin below that
     "huggingface_hub>=0.20.0,<0.26.0",
     "safetensors>=0.4.0",
