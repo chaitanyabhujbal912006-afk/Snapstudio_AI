@@ -2,15 +2,16 @@
 AI Super-Resolution: upscale images 4x using Swin2SR.
 Model: caidas/swin2SR-realworld-sr-x4-64-bsrgan-psnr (HuggingFace)
 
-Works on GPU (T4: ~5–15s) or CPU (~2–5 min for small images).
+Works on GPU (T4: ~5-15s) or CPU (~2-5 min for small images).
 Handles large inputs via tiled processing to avoid OOM.
 """
 
-import math
 import numpy as np
 import torch
 from PIL import Image
-from transformers import Swin2SRForImageSuperResolution, Swin2SRImageProcessor
+# AutoImageProcessor is the forward-compatible way to load Swin2SR processor
+# in transformers>=4.46 (Swin2SRImageProcessor still works but may warn)
+from transformers import AutoImageProcessor, Swin2SRForImageSuperResolution
 
 _MODEL_4X = "caidas/swin2SR-realworld-sr-x4-64-bsrgan-psnr"
 _MODEL_2X = "caidas/swin2SR-compressed-sr-x2-64"
@@ -26,7 +27,7 @@ def _load_model(scale: int = 4):
     if _model is not None and _loaded_scale == scale:
         return _model, _processor
 
-    _processor = Swin2SRImageProcessor.from_pretrained(model_id)
+    _processor = AutoImageProcessor.from_pretrained(model_id)
     device_type = "cuda" if torch.cuda.is_available() else "cpu"
     _model = Swin2SRForImageSuperResolution.from_pretrained(
         model_id,
@@ -37,8 +38,11 @@ def _load_model(scale: int = 4):
     return _model, _processor
 
 
-def _upscale_tile(model, processor, tile: Image.Image, device: str) -> Image.Image:
-    """Process a single tile through the model."""
+def _upscale_tile(model, processor, tile: Image.Image, scale: int, device: str) -> Image.Image:
+    """Process a single tile through the model and crop to exact expected size."""
+    expected_w = tile.width * scale
+    expected_h = tile.height * scale
+
     inputs = processor(tile, return_tensors="pt")
     pixel_values = inputs.pixel_values.to(device)
     if device == "cuda":
@@ -49,7 +53,15 @@ def _upscale_tile(model, processor, tile: Image.Image, device: str) -> Image.Ima
 
     out = outputs.reconstruction.squeeze().float().cpu()
     out = torch.clamp(out.permute(1, 2, 0) * 255, 0, 255).numpy().astype(np.uint8)
-    return Image.fromarray(out)
+    tile_out = Image.fromarray(out)
+
+    # The processor may pad the input to a multiple of window_size before inference.
+    # Crop the reconstruction back to the exact expected size to avoid shape mismatches
+    # when blending tiles into the accumulation buffer.
+    if tile_out.width != expected_w or tile_out.height != expected_h:
+        tile_out = tile_out.crop((0, 0, expected_w, expected_h))
+
+    return tile_out
 
 
 def upscale_image(
@@ -76,12 +88,11 @@ def upscale_image(
 
     # For small images, process in one shot
     if w <= max_tile_size and h <= max_tile_size:
-        return _upscale_tile(model, processor, image, device)
+        return _upscale_tile(model, processor, image, scale, device)
 
     # Tiled processing for large images
     stride = max_tile_size - tile_overlap
     out_w, out_h = w * scale, h * scale
-    output = Image.new("RGB", (out_w, out_h))
     weight_map = np.zeros((out_h, out_w), dtype=np.float32)
     accum = np.zeros((out_h, out_w, 3), dtype=np.float32)
 
@@ -93,23 +104,29 @@ def upscale_image(
             x1 = min(x0 + max_tile_size, w)
             y1 = min(y0 + max_tile_size, h)
             tile = image.crop((x0, y0, x1, y1))
-            tile_up = _upscale_tile(model, processor, tile, device)
+            tile_up = _upscale_tile(model, processor, tile, scale, device)
             tile_arr = np.array(tile_up).astype(np.float32)
 
-            # Compute output coordinates
+            # Use actual output tile dimensions (not assumed scale*(x1-x0)) to avoid
+            # indexing mismatches caused by processor padding differences.
+            actual_h, actual_w = tile_arr.shape[:2]
             ox0, oy0 = x0 * scale, y0 * scale
-            ox1, oy1 = x1 * scale, y1 * scale
+            ox1 = min(ox0 + actual_w, out_w)
+            oy1 = min(oy0 + actual_h, out_h)
 
-            # Apply cosine blending weight (smooth at edges)
+            # Crop tile_arr to fit the buffer exactly
+            tile_arr = tile_arr[:oy1 - oy0, :ox1 - ox0]
             tw, th = tile_arr.shape[1], tile_arr.shape[0]
-            wx = np.hanning(tw)
-            wy = np.hanning(th)
+
+            # Apply Hanning (cosine) blend weights for seamless tile edges
+            wx = np.hanning(tw) if tw > 1 else np.ones(tw)
+            wy = np.hanning(th) if th > 1 else np.ones(th)
             weight = np.outer(wy, wx).astype(np.float32)
 
             accum[oy0:oy1, ox0:ox1] += tile_arr * weight[..., np.newaxis]
             weight_map[oy0:oy1, ox0:ox1] += weight
 
-    # Normalize
+    # Normalize and return
     weight_map = np.where(weight_map > 0, weight_map, 1.0)
     result = np.clip(accum / weight_map[..., np.newaxis], 0, 255).astype(np.uint8)
     return Image.fromarray(result)
