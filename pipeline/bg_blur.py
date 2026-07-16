@@ -52,6 +52,7 @@ def blur_background(
         # Multi-pass blur with different kernel sizes for depth falloff
         background = np.zeros_like(img_arr, dtype=np.float32)
         n_passes = 6
+        total_w = np.zeros_like(blur_weight)[..., np.newaxis]
         for i in range(n_passes):
             fraction = (i + 1) / n_passes
             k = max(3, int(max_kernel * fraction))
@@ -59,18 +60,20 @@ def blur_background(
             blurred = cv2.GaussianBlur(img_arr, (k, k), 0)
             w = np.clip(blur_weight - (1 - fraction) * 0.5, 0, 1)[..., np.newaxis]
             background += blurred.astype(np.float32) * w
-
-        # Normalize: where blur_weight > 0,  background / sum_of_weights
-        total_w = np.zeros_like(blur_weight)[..., np.newaxis]
-        for i in range(n_passes):
-            fraction = (i + 1) / n_passes
-            w = np.clip(blur_weight - (1 - fraction) * 0.5, 0, 1)[..., np.newaxis]
             total_w += w
-        total_w = np.where(total_w > 0, total_w, 1.0)
-        background = np.clip(background / total_w, 0, 255).astype(np.uint8)
 
-        # For foreground regions (mask_arr ~ 1), use original
-        bg_flat = cv2.GaussianBlur(img_arr, (max_kernel, max_kernel), 0)
+        # Normalize the blurred mixture where total_w > 0
+        valid_mask = total_w > 0
+        background = np.where(valid_mask, background / np.where(valid_mask, total_w, 1.0), 0.0)
+
+        # Smoothly blend the blurred background mixture with the original sharp image
+        # based on depth: far areas (large blur_weight) get 100% blurred mixture,
+        # near areas (low blur_weight) get 100% original sharp image.
+        sharp_blend = (1.0 - blur_weight)[..., np.newaxis]
+        background = background * (1.0 - sharp_blend) + img_arr.astype(np.float32) * sharp_blend
+        background = np.clip(background, 0, 255).astype(np.uint8)
+
+        # For foreground regions (mask_arr ~ 1), force use the original image
         subject_mask_3ch = mask_arr[..., np.newaxis]
         background = np.where(subject_mask_3ch > 0.5, img_arr, background)
 

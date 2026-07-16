@@ -43,14 +43,21 @@ def add_shadow(composited: Image.Image, mask: Image.Image,
 
 def match_tone(product_region: np.ndarray, background: np.ndarray) -> np.ndarray:
     """
-    Simple per-channel mean/std matching so the product's tone doesn't clash
-    with the new background's color temperature. Operates on numpy RGB arrays.
+    Performs per-channel color transfer by aligning the mean (color temperature/brightness)
+    and standard deviation (contrast) of the product cutout to the background statistics,
+    with a blend strength factor (0.45) to retain original product identity.
     """
     result = product_region.copy().astype(np.float32)
+    strength = 0.45  # Blends original product appearance with background lighting
     for c in range(3):
         p_mean, p_std = result[..., c].mean(), result[..., c].std() + 1e-6
         b_mean, b_std = background[..., c].mean(), background[..., c].std() + 1e-6
-        result[..., c] = (result[..., c] - p_mean) * (b_std / p_std) * 0.5 + p_mean  # 0.5 = noticeable but not extreme
+        
+        # Shift and scale product pixels relative to background metrics
+        target = (result[..., c] - p_mean) * (b_std / p_std) + b_mean
+        
+        # Interpolate between original and matched color
+        result[..., c] = (1.0 - strength) * result[..., c] + strength * target
     return np.clip(result, 0, 255).astype(np.uint8)
 
 
