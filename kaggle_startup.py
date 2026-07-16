@@ -18,7 +18,8 @@ import subprocess, sys
 # Clean up pre-installed conflicting ONNX and Numba packages to avoid namespace corruption
 print("🧹 Cleaning up pre-installed conflicting packages...")
 try:
-    subprocess.check_call([sys.executable, "-m", "pip", "uninstall", "-y", "onnxruntime", "onnxruntime-gpu", "rembg", "numba", "-q"])
+    subprocess.check_call([sys.executable, "-m", "pip", "uninstall", "-y",
+                           "onnxruntime", "onnxruntime-gpu", "rembg", "numba", "mediapipe", "-q"])
 except Exception as e:
     print(f"⚠️ Clean step warning: {e}")
 
@@ -37,7 +38,8 @@ packages = [
     "opencv-python-headless>=4.8.0",
     "scipy>=1.11.0",
     "scikit-image>=0.21.0",
-    "mediapipe>=0.10.0",
+    # NOTE: Do NOT install mediapipe — mediapipe>=0.10 removed mp.solutions,
+    # which controlnet_aux imports. Missing mediapipe only causes a harmless warning.
     # huggingface_hub>=0.27 removed HfFolder which Gradio 4.x needs — pin below that
     "huggingface_hub>=0.20.0,<0.26.0",
     "safetensors>=0.4.0",
