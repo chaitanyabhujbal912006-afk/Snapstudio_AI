@@ -57,8 +57,17 @@ if not os.path.exists(REPO_DIR):
     subprocess.check_call(["git", "clone", REPO_URL, REPO_DIR, "--depth=1"])
     print(f"✅ Repo cloned to {REPO_DIR}")
 else:
-    subprocess.check_call(["git", "-C", REPO_DIR, "pull"])
-    print("✅ Repo updated")
+    try:
+        subprocess.check_call(["git", "-C", REPO_DIR, "reset", "--hard"])
+        subprocess.check_call(["git", "-C", REPO_DIR, "clean", "-fd"])
+        subprocess.check_call(["git", "-C", REPO_DIR, "pull"])
+        print("✅ Repo updated")
+    except Exception as e:
+        print(f"⚠️ Git update failed, recreating directories: {e}")
+        import shutil
+        shutil.rmtree(REPO_DIR, ignore_errors=True)
+        subprocess.check_call(["git", "clone", REPO_URL, REPO_DIR, "--depth=1"])
+        print("✅ Clean repo cloned from scratch")
 
 os.chdir(REPO_DIR)
 sys.path.insert(0, REPO_DIR)
