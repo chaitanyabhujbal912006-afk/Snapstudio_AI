@@ -69,6 +69,9 @@ def _load_t2i():
     if _t2i_pipe is not None:
         return _t2i_pipe
 
+    from pipeline.device_helper import set_active_cuda_device
+    set_active_cuda_device("t2i")
+    
     device = get_device_for_pipeline("t2i")
     is_cuda = "cuda" in device
     dtype = torch.float16 if is_cuda else torch.float32

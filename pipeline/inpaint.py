@@ -23,6 +23,9 @@ def _load_pipeline():
     if _pipe is not None:
         return _pipe
 
+    from pipeline.device_helper import set_active_cuda_device
+    set_active_cuda_device("inpaint")
+    
     device = get_device_for_pipeline("inpaint")
     is_cuda = "cuda" in device
     dtype = torch.float16 if is_cuda else torch.float32

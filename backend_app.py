@@ -68,6 +68,11 @@ GPU_MODELS = {
 
 def free_gpu_models(keep: str = None):
     """Unload GPU models dynamically to prevent OOM based on available GPUs."""
+    # Ensure PyTorch default GPU device index aligns with the target pipeline's device
+    if keep and keep != "clear_all":
+        from pipeline.device_helper import set_active_cuda_device
+        set_active_cuda_device(keep)
+
     # If 2 or more GPUs are available (Kaggle GPU T4 x2), we have 2 x 15.6 GB = 31.2 GB of VRAM.
     # We distribute models across devices using pipeline/device_helper.py and can safely 
     # keep ALL models warm in VRAM for instant switching latency!

@@ -21,6 +21,11 @@ def _get_midas():
 
 
 def get_depth_map(image: Image.Image) -> Image.Image:
+    # Always run depth preprocessing on the bg_swap device (cuda:0)
+    # to prevent cross-device conflicts if triggered from a different GPU context (e.g. bg_blur on cuda:1)
+    from pipeline.device_helper import set_active_cuda_device
+    set_active_cuda_device("bg_swap")
+    
     midas = _get_midas()
     depth = midas(image)
     return depth.resize(image.size)

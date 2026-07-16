@@ -20,3 +20,19 @@ def get_device_for_pipeline(pipeline_name: str) -> str:
         return "cuda:0"
     else:
         return "cuda:1"
+
+
+def set_active_cuda_device(pipeline_name: str) -> None:
+    """
+    Sets PyTorch's default CUDA device index key to prevent internal libraries
+    (like HuggingFace diffusers, xformers, and CUDA kernels) from instantiating 
+    tensors on cuda:0 when the pipeline should run on cuda:1.
+    """
+    if not torch.cuda.is_available():
+        return
+    
+    device = get_device_for_pipeline(pipeline_name)
+    if "cuda" in device:
+        parts = device.split(":")
+        idx = int(parts[1]) if len(parts) > 1 else 0
+        torch.cuda.set_device(idx)

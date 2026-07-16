@@ -28,6 +28,9 @@ def _load_model(scale: int = 4):
     if _model is not None and _loaded_scale == scale:
         return _model, _processor
 
+    from pipeline.device_helper import set_active_cuda_device
+    set_active_cuda_device("upscale")
+
     _processor = AutoImageProcessor.from_pretrained(model_id)
     device_type = get_device_for_pipeline("upscale")
     is_cuda = "cuda" in device_type
