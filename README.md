@@ -42,14 +42,69 @@ Upload a photo and get studio-quality results instantly: auto-enhance, swap back
 ## 🚀 Quick Start
 
 ### 1. Start the Backend (Kaggle GPU)
+
+> 📄 See the full guide: [KAGGLER_INSTRUCTIONS.md](./KAGGLER_INSTRUCTIONS.md)
+
+**Step 1 — Create & configure a Kaggle Notebook**
 1. Go to [kaggle.com](https://kaggle.com) → **Create → New Notebook**
-2. Upload `kaggle_notebook.ipynb` via **File → Import Notebook**
-3. Sidebar: **Accelerator → GPU T4 x2**, **Internet → ON**
-4. **Run All** → wait for output like:
-   ```
-   Running on public URL: https://xxxxxxxx.gradio.live
-   ```
-5. Copy that URL
+2. In the right sidebar, expand **Notebook options** → set **Accelerator** to **GPU T4 x2**
+3. Toggle **Internet → ON** (required to download models and sync the repo)
+
+**Step 2 — Add Cell 1: Clone / Sync the repo**
+
+Paste the following into the first notebook cell and run it:
+
+```python
+import os, subprocess, sys
+REPO_URL = 'https://github.com/chaitanyabhujbal912006-afk/Snapstudio_AI.git'
+REPO_DIR = '/kaggle/working/snapstudio'
+
+if not os.path.exists(REPO_DIR):
+    subprocess.check_call(['git', 'clone', REPO_URL, REPO_DIR, '--depth=1'])
+    print('✅ Repository cloned successfully!')
+else:
+    try:
+        subprocess.check_call(['git', '-C', REPO_DIR, 'reset', '--hard'])
+        subprocess.check_call(['git', '-C', REPO_DIR, 'clean', '-fd'])
+        subprocess.check_call(['git', '-C', REPO_DIR, 'pull'])
+        print('✅ Repository synchronized with latest changes!')
+    except Exception as e:
+        print('⚠️ Sync failed, recreating repository directory:', e)
+        import shutil
+        shutil.rmtree(REPO_DIR, ignore_errors=True)
+        subprocess.check_call(['git', 'clone', REPO_URL, REPO_DIR, '--depth=1'])
+        print('✅ Clean repository cloned successfully!')
+
+os.chdir(REPO_DIR)
+if REPO_DIR not in sys.path:
+    sys.path.insert(0, REPO_DIR)
+print('Working dir:', os.getcwd())
+```
+
+**Step 3 — Add Cell 2: Install dependencies & launch backend**
+
+Paste the following into the second notebook cell and run it:
+
+```python
+import os, sys
+REPO_DIR = '/kaggle/working/snapstudio'
+os.chdir(REPO_DIR)
+if REPO_DIR not in sys.path:
+    sys.path.insert(0, REPO_DIR)
+
+# Run the official startup bootstrapper
+exec(open(REPO_DIR + '/kaggle_startup.py').read())
+```
+
+> ⏳ On the **first run**, models are downloaded and cached — this can take **5–10 minutes**. Subsequent runs are much faster.
+
+**Step 4 — Copy the public URL**
+
+When startup completes, look for this line in the cell output:
+```
+Running on public URL: https://xxxxxxxx.gradio.live
+```
+Copy that URL.
 
 ### 2. Open the Frontend (Vercel)
 1. Visit your Vercel deployment URL
