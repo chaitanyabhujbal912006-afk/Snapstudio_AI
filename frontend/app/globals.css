@@ -1,64 +1,241 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;0,14..32,900;1,14..32,400&family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap');
 @import "tailwindcss";
 
+/* ─── Design Tokens ─────────────────────────────────────────────────────────── */
 :root {
-  --bg: #0a0a0f;
-  --surface: #111118;
-  --surface-2: #16161f;
-  --border: rgba(255,255,255,0.07);
-  --purple: #7c3aed;
-  --purple-light: #a78bfa;
-  --purple-glow: rgba(124, 58, 237, 0.35);
-  --pink: #ec4899;
-  --text: #f0f0ff;
-  --text-muted: #6b7280;
-  --text-dim: #9ca3af;
+  /* Core backgrounds */
+  --bg-void:      #080810;
+  --bg-base:      #0c0c16;
+  --bg-surface:   #111120;
+  --bg-raised:    #16162a;
+  --bg-floating:  #1c1c32;
+
+  /* Accent — Warm Amber Studio */
+  --amber:        #f59e0b;
+  --amber-bright: #fbbf24;
+  --amber-dim:    #92400e;
+  --amber-glow:   rgba(245, 158, 11, 0.18);
+  --amber-muted:  rgba(245, 158, 11, 0.08);
+
+  /* Secondary accent — Electric Cyan */
+  --cyan:         #06b6d4;
+  --cyan-dim:     rgba(6, 182, 212, 0.15);
+
+  /* Borders */
+  --border-subtle:  rgba(255,255,255,0.045);
+  --border-medium:  rgba(255,255,255,0.09);
+  --border-accent:  rgba(245,158,11,0.25);
+
+  /* Text */
+  --text-primary:   #f2f0ea;
+  --text-secondary: #9e9b8e;
+  --text-dim:       #5c5a52;
+  --text-accent:    #f59e0b;
+
+  /* Fonts */
+  --font-display: 'Space Grotesk', 'Inter', system-ui, sans-serif;
+  --font-body:    'Inter', system-ui, sans-serif;
+  --font-mono:    'Space Mono', 'Fira Code', monospace;
 }
 
-* { box-sizing: border-box; }
+/* ─── Reset & Base ───────────────────────────────────────────────────────────── */
+/* NOTE: Do NOT reset margin/padding on * — it breaks mx-auto centering.
+   Tailwind's own preflight handles margin/padding resets. */
+*, *::before, *::after { box-sizing: border-box; }
 
 html {
   scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  width: 100%;
 }
 
 body {
-  background-color: var(--bg);
-  color: var(--text);
-  font-family: 'Inter', system-ui, sans-serif;
+  background-color: var(--bg-void);
+  color: var(--text-primary);
+  font-family: var(--font-body);
   min-height: 100vh;
+  width: 100%;
   overflow-x: hidden;
 }
 
-/* Animated background grid */
+/* ─── Film Grain Texture ─────────────────────────────────────────────────────── */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+  background-size: 200px 200px;
+  opacity: 0.028;
+  pointer-events: none;
+  z-index: 9999;
+  mix-blend-mode: overlay;
+}
+
+/* ─── Subtle horizontal scan lines ──────────────────────────────────────────── */
 body::before {
   content: '';
   position: fixed;
   inset: 0;
-  background-image:
-    linear-gradient(rgba(124,58,237,0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(124,58,237,0.03) 1px, transparent 1px);
-  background-size: 60px 60px;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.04) 2px,
+    rgba(0,0,0,0.04) 4px
+  );
   pointer-events: none;
-  z-index: 0;
+  z-index: 1;
 }
 
-/* Gradient glow orbs */
+/* ─── Custom Scrollbar ───────────────────────────────────────────────────────── */
+::-webkit-scrollbar         { width: 4px; height: 4px; }
+::-webkit-scrollbar-track   { background: var(--bg-base); }
+::-webkit-scrollbar-thumb   { background: #2a2a40; border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--amber-dim); }
+
+/* ─── Selection ──────────────────────────────────────────────────────────────── */
+::selection { background: rgba(245,158,11,0.25); color: #fff; }
+
+/* ─── Utility Animations ─────────────────────────────────────────────────────── */
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0px) scale(1); }
+  50%       { transform: translateY(-20px) scale(1.05); }
+}
+@keyframes float-med {
+  0%, 100% { transform: translateY(0px) translateX(0px); }
+  33%       { transform: translateY(-15px) translateX(10px); }
+  66%       { transform: translateY(8px)  translateX(-8px); }
+}
+@keyframes rotate-slow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes aperture-open {
+  from { clip-path: circle(0% at 50% 50%); opacity: 0; }
+  to   { clip-path: circle(100% at 50% 50%); opacity: 1; }
+}
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245,158,11,0); }
+  50%       { box-shadow: 0 0 20px 4px rgba(245,158,11,0.15); }
+}
+@keyframes scan-down {
+  0%   { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+@keyframes text-reveal {
+  from { clip-path: inset(0 100% 0 0); }
+  to   { clip-path: inset(0 0% 0 0); }
+}
+
+/* ─── Utility Classes ────────────────────────────────────────────────────────── */
+.font-display { font-family: var(--font-display); }
+.font-mono    { font-family: var(--font-mono); }
+
+.text-amber   { color: var(--amber); }
+.text-amber-b { color: var(--amber-bright); }
+
+.bg-surface-glass {
+  background: rgba(17, 17, 32, 0.75);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+}
+
+.border-studio { border-color: var(--border-accent); }
+
+.shimmer-text {
+  background: linear-gradient(90deg,
+    var(--text-secondary) 0%,
+    var(--amber-bright)   30%,
+    var(--text-primary)   50%,
+    var(--amber)          70%,
+    var(--text-secondary) 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 4s linear infinite;
+}
+
+.glow-amber {
+  box-shadow: 0 0 30px rgba(245,158,11,0.2), 0 0 60px rgba(245,158,11,0.06);
+}
+
+.canvas-drawing { cursor: crosshair; }
+
+/* ─── Ambient Orbs ───────────────────────────────────────────────────────────── */
 .bg-orb {
   position: fixed;
   border-radius: 50%;
-  filter: blur(120px);
+  filter: blur(100px);
   pointer-events: none;
   z-index: 0;
 }
 
-/* Scrollbar */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: var(--bg); }
-::-webkit-scrollbar-thumb { background: #2d2d3d; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: var(--purple); }
+/* ─── Studio Panel ───────────────────────────────────────────────────────────── */
+.studio-panel {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+}
 
-/* Selection */
-::selection { background: rgba(124,58,237,0.3); color: #fff; }
+/* ─── Studio Button ──────────────────────────────────────────────────────────── */
+.btn-studio {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border-radius: 10px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.8125rem;
+  letter-spacing: 0.02em;
+  background: linear-gradient(135deg, var(--amber) 0%, #d97706 100%);
+  color: #0a0808;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 16px rgba(245,158,11,0.25), 0 1px 0 rgba(255,255,255,0.1) inset;
+}
+.btn-studio:hover {
+  background: linear-gradient(135deg, var(--amber-bright) 0%, var(--amber) 100%);
+  box-shadow: 0 6px 24px rgba(245,158,11,0.35), 0 1px 0 rgba(255,255,255,0.15) inset;
+  transform: translateY(-1px);
+}
+.btn-studio:active { transform: translateY(0); }
+.btn-studio:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
 
-/* Canvas cursor */
-.canvas-drawing { cursor: crosshair; }
+/* ─── Ghost Button ───────────────────────────────────────────────────────────── */
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 0.8125rem;
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.btn-ghost:hover {
+  background: rgba(255,255,255,0.04);
+  border-color: var(--border-medium);
+  color: var(--text-primary);
+}
+
+/* film strip holes decoration */
+.film-hole {
+  width: 12px;
+  height: 16px;
+  border-radius: 3px;
+  background: var(--bg-void);
+  border: 1px solid rgba(255,255,255,0.06);
+}

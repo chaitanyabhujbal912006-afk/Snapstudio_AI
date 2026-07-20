@@ -26,11 +26,13 @@ import { useBackend } from "@/app/context/BackendContext";
 import UploadZone from "@/app/components/UploadZone";
 import ResultPanel from "@/app/components/ResultPanel";
 import { apiBgBlur, apiRetouch } from "@/app/lib/api";
-import { Loader2, ArrowUpFromLine, UserCheck, ArrowLeft } from "lucide-react";
+import { Loader2, ArrowUpFromLine, UserCheck, ArrowLeft, Zap } from "lucide-react";
 import { useCallback } from "react";
 import Link from "next/link";
 
-// ── Inline BgBlur panel ───────────────────────────────────────────────────────
+// ── All panel logic is UNCHANGED — only layout/visual wrapper updated ──
+
+// ── BgBlur Panel ─────────────────────────────────────────────────────────────
 function BgBlurPanel() {
   const { backendUrl, isConnected } = useBackend();
   const [preview, setPreview] = useState<string | null>(null);
@@ -55,54 +57,81 @@ function BgBlurPanel() {
   const download = (url: string) => { const a = document.createElement("a"); a.href = url; a.download = "snapstudio-bokeh.png"; a.click(); };
 
   return (
-    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-5">
-      <div className="flex items-start gap-3">
-        <div className="w-10 h-10 rounded-xl bg-violet-600/20 border border-violet-500/20 flex items-center justify-center shrink-0">
-          <ArrowUpFromLine size={18} className="text-violet-400" />
+    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      {/* Panel header */}
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
+        <div style={{ width: 42, height: 42, borderRadius: 11, background: "rgba(167,139,250,0.12)", border: "1px solid rgba(167,139,250,0.25)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <ArrowUpFromLine size={18} style={{ color: "#a78bfa" }} />
         </div>
         <div>
-          <h2 className="text-white font-semibold text-lg">Background Blur</h2>
-          <p className="text-zinc-500 text-sm">DSLR-style bokeh: subject stays sharp, background gets depth-aware natural blur. ~3–8s.</p>
+          <h2 style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "1.05rem", color: "var(--text-primary)", marginBottom: 4 }}>Background Blur</h2>
+          <p style={{ fontSize: "0.78rem", color: "var(--text-secondary)", lineHeight: 1.55 }}>DSLR-style bokeh: subject stays sharp, background gets depth-aware natural blur. ~3–8s.</p>
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2"><p className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Original</p><UploadZone onFile={handleFile} preview={preview} /></div>
-        <div className="space-y-2"><p className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Bokeh</p><ResultPanel result={result} isProcessing={isProcessing} placeholder={{ icon: "🌸", text: "Bokeh result will appear here" }} onDownload={download} /></div>
-      </div>
-      <div className="grid grid-cols-3 gap-4">
-        <div className="col-span-2">
-          <div className="flex justify-between mb-1"><label className="text-xs text-zinc-500">Blur Amount</label><span className="text-xs text-white">{blur.toFixed(2)}</span></div>
-          <input type="range" min={0} max={1} step={0.05} value={blur} onChange={(e) => setBlur(Number(e.target.value))} className="w-full accent-violet-500" />
-          <div className="flex justify-between text-[10px] text-zinc-700 mt-1"><span>Subtle</span><span>Very blurry</span></div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <p style={{ fontFamily: "var(--font-mono)", fontSize: "0.58rem", letterSpacing: "0.14em", color: "var(--text-dim)" }}>ORIGINAL</p>
+          <UploadZone onFile={handleFile} preview={preview} />
         </div>
-        <div className="space-y-2">
-          <label className="text-xs text-zinc-500">Subject</label>
-          <div className="grid grid-cols-2 gap-1">
-            {[["person","Portrait"],["general","Object"]].map(([v,l]) => (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <p style={{ fontFamily: "var(--font-mono)", fontSize: "0.58rem", letterSpacing: "0.14em", color: "var(--text-dim)" }}>BOKEH RESULT</p>
+          <ResultPanel result={result} isProcessing={isProcessing} placeholder={{ icon: "🌸", text: "Bokeh result will appear here" }} onDownload={download} />
+        </div>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
+        <div style={{ gridColumn: "span 2" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+            <label style={{ fontSize: "0.72rem", color: "var(--text-secondary)", fontFamily: "var(--font-display)" }}>Blur Amount</label>
+            <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.7rem", color: "var(--amber)" }}>{blur.toFixed(2)}</span>
+          </div>
+          <input type="range" min={0} max={1} step={0.05} value={blur} onChange={(e) => setBlur(Number(e.target.value))} className="w-full accent-amber-500" />
+          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
+            <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.58rem", color: "var(--text-dim)" }}>Subtle</span>
+            <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.58rem", color: "var(--text-dim)" }}>Max blur</span>
+          </div>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <label style={{ fontSize: "0.72rem", color: "var(--text-secondary)", fontFamily: "var(--font-display)" }}>Subject</label>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+            {[["person", "Portrait"], ["general", "Object"]].map(([v, l]) => (
               <button key={v} onClick={() => setSubjectType(v)}
-                className={`py-1.5 rounded-lg text-xs font-medium border transition-all cursor-pointer ${subjectType === v ? "border-violet-500/50 bg-violet-600/20 text-white" : "border-white/10 bg-white/5 text-zinc-500"}`}>
-                {l}
-              </button>
+                style={{
+                  padding: "7px 4px", borderRadius: 8, fontSize: "0.7rem",
+                  fontFamily: "var(--font-display)", fontWeight: 600, cursor: "pointer",
+                  border: subjectType === v ? "1px solid rgba(245,158,11,0.4)" : "1px solid var(--border-subtle)",
+                  background: subjectType === v ? "rgba(245,158,11,0.1)" : "rgba(255,255,255,0.025)",
+                  color: subjectType === v ? "var(--amber)" : "var(--text-dim)",
+                  transition: "all 0.18s",
+                }}>{l}</button>
             ))}
           </div>
         </div>
       </div>
-      <div className="flex items-center gap-3">
-        <button onClick={() => setUseDepth(!useDepth)} className={`relative w-10 h-5 rounded-full transition-colors cursor-pointer ${useDepth ? "bg-violet-600" : "bg-white/10"}`}>
-          <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${useDepth ? "translate-x-5" : "translate-x-0.5"}`} />
+
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <button onClick={() => setUseDepth(!useDepth)}
+          style={{
+            position: "relative", width: 40, height: 22, borderRadius: 11,
+            background: useDepth ? "rgba(245,158,11,0.8)" : "rgba(255,255,255,0.08)",
+            border: "none", cursor: "pointer", transition: "background 0.2s", flexShrink: 0,
+          }}>
+          <div style={{ position: "absolute", top: 3, left: useDepth ? 20 : 3, width: 16, height: 16, borderRadius: "50%", background: "white", transition: "left 0.2s", boxShadow: "0 1px 4px rgba(0,0,0,0.3)" }} />
         </button>
-        <span className="text-xs text-zinc-400">Depth-based blur (MiDaS — more natural, slower)</span>
+        <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)", fontFamily: "var(--font-display)" }}>Depth-based blur (MiDaS — more natural, slower)</span>
       </div>
-      {error && <div className="rounded-xl bg-red-950/50 border border-red-500/20 px-4 py-3 text-red-400 text-sm">{error}</div>}
-      <button onClick={handleRun} disabled={!imageB64 || !isConnected || isProcessing}
-        className="w-full py-3.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2.5 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 disabled:opacity-40 disabled:cursor-not-allowed text-white cursor-pointer shadow-lg shadow-purple-900/30">
-        {isProcessing ? <><Loader2 size={16} className="animate-spin" />Blurring…</> : <><ArrowUpFromLine size={16} />Apply Bokeh</>}
+
+      {error && <div style={{ borderRadius: 10, background: "rgba(153,27,27,0.25)", border: "1px solid rgba(248,113,113,0.2)", padding: "12px 16px", color: "#f87171", fontSize: "0.78rem" }}>{error}</div>}
+
+      <button onClick={handleRun} disabled={!imageB64 || !isConnected || isProcessing} className="btn-studio w-full" style={{ justifyContent: "center", padding: "13px 24px" }}>
+        {isProcessing ? <><Loader2 size={15} className="animate-spin" /> Blurring…</> : <><ArrowUpFromLine size={15} /> Apply Bokeh</>}
       </button>
     </motion.div>
   );
 }
 
-// ── Inline Retouch panel ──────────────────────────────────────────────────────
+// ── Retouch Panel ─────────────────────────────────────────────────────────────
 function RetouchPanel() {
   const { backendUrl, isConnected } = useBackend();
   const [preview, setPreview] = useState<string | null>(null);
@@ -122,39 +151,56 @@ function RetouchPanel() {
   const download = (url: string) => { const a = document.createElement("a"); a.href = url; a.download = "snapstudio-retouched.png"; a.click(); };
   const sliders = [
     { key: "skin_smooth", label: "Skin Smooth", min: 0, max: 1, step: 0.05 },
-    { key: "clarity", label: "Clarity", min: 0, max: 1, step: 0.05 },
-    { key: "sharpen", label: "Sharpen", min: 0, max: 1, step: 0.05 },
-    { key: "vibrance", label: "Vibrance", min: 0, max: 1, step: 0.05 },
+    { key: "clarity",     label: "Clarity",     min: 0, max: 1, step: 0.05 },
+    { key: "sharpen",     label: "Sharpen",     min: 0, max: 1, step: 0.05 },
+    { key: "vibrance",    label: "Vibrance",    min: 0, max: 1, step: 0.05 },
     { key: "shadow_lift", label: "Shadow Lift", min: 0, max: 1, step: 0.05 },
-    { key: "teeth_whiten", label: "Teeth Whiten", min: 0, max: 1, step: 0.05 },
+    { key: "teeth_whiten",label: "Teeth Whiten",min: 0, max: 1, step: 0.05 },
   ];
 
   return (
-    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-5">
-      <div className="flex items-start gap-3">
-        <div className="w-10 h-10 rounded-xl bg-violet-600/20 border border-violet-500/20 flex items-center justify-center shrink-0"><UserCheck size={18} className="text-violet-400" /></div>
+    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
+        <div style={{ width: 42, height: 42, borderRadius: 11, background: "rgba(52,211,153,0.1)", border: "1px solid rgba(52,211,153,0.25)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <UserCheck size={18} style={{ color: "#34d399" }} />
+        </div>
         <div>
-          <h2 className="text-white font-semibold text-lg">Portrait Retouch</h2>
-          <p className="text-zinc-500 text-sm">Professional skin smoothing, clarity, sharpening, vibrance, shadow lift & teeth whitening — all OpenCV, instant.</p>
+          <h2 style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "1.05rem", color: "var(--text-primary)", marginBottom: 4 }}>Portrait Retouch</h2>
+          <p style={{ fontSize: "0.78rem", color: "var(--text-secondary)", lineHeight: 1.55 }}>Professional skin smoothing, clarity, sharpening, vibrance, shadow lift & teeth whitening — all OpenCV, instant.</p>
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2"><p className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Original</p><UploadZone onFile={handleFile} preview={preview} /></div>
-        <div className="space-y-2"><p className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Retouched</p><ResultPanel result={result} isProcessing={isProcessing} placeholder={{ icon: "✨", text: "Retouched portrait will appear here" }} onDownload={download} /></div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <p style={{ fontFamily: "var(--font-mono)", fontSize: "0.58rem", letterSpacing: "0.14em", color: "var(--text-dim)" }}>ORIGINAL</p>
+          <UploadZone onFile={handleFile} preview={preview} />
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <p style={{ fontFamily: "var(--font-mono)", fontSize: "0.58rem", letterSpacing: "0.14em", color: "var(--text-dim)" }}>RETOUCHED</p>
+          <ResultPanel result={result} isProcessing={isProcessing} placeholder={{ icon: "✨", text: "Retouched portrait will appear here" }} onDownload={download} />
+        </div>
       </div>
-      <div className="grid grid-cols-2 gap-x-6 gap-y-3">
-        {sliders.map(s => (
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px 24px" }}>
+        {sliders.map((s) => (
           <div key={s.key}>
-            <div className="flex justify-between mb-1"><label className="text-xs text-zinc-500">{s.label}</label><span className="text-xs text-white">{(p[s.key as keyof typeof p] as number).toFixed(2)}</span></div>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+              <label style={{ fontSize: "0.72rem", color: "var(--text-secondary)", fontFamily: "var(--font-display)" }}>{s.label}</label>
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.7rem", color: "var(--amber)" }}>
+                {(p[s.key as keyof typeof p] as number).toFixed(2)}
+              </span>
+            </div>
             <input type="range" min={s.min} max={s.max} step={s.step} value={p[s.key as keyof typeof p] as number}
-              onChange={(e) => setP(prev => ({ ...prev, [s.key]: Number(e.target.value) }))} className="w-full accent-violet-500" />
+              onChange={(e) => setP((prev) => ({ ...prev, [s.key]: Number(e.target.value) }))}
+              className="w-full accent-amber-500" />
           </div>
         ))}
       </div>
-      {error && <div className="rounded-xl bg-red-950/50 border border-red-500/20 px-4 py-3 text-red-400 text-sm">{error}</div>}
-      <button onClick={handleRun} disabled={!imageB64 || !isConnected || isProcessing}
-        className="w-full py-3.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2.5 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 disabled:opacity-40 disabled:cursor-not-allowed text-white cursor-pointer shadow-lg shadow-purple-900/30">
-        {isProcessing ? <><Loader2 size={16} className="animate-spin" />Retouching…</> : <><UserCheck size={16} />Retouch Portrait</>}
+
+      {error && <div style={{ borderRadius: 10, background: "rgba(153,27,27,0.25)", border: "1px solid rgba(248,113,113,0.2)", padding: "12px 16px", color: "#f87171", fontSize: "0.78rem" }}>{error}</div>}
+
+      <button onClick={handleRun} disabled={!imageB64 || !isConnected || isProcessing} className="btn-studio w-full" style={{ justifyContent: "center", padding: "13px 24px" }}>
+        {isProcessing ? <><Loader2 size={15} className="animate-spin" /> Retouching…</> : <><UserCheck size={15} /> Retouch Portrait</>}
       </button>
     </motion.div>
   );
@@ -186,59 +232,140 @@ function ActivePanel({ id }: { id: FeatureId }) {
   );
 }
 
-// ── Main app ──────────────────────────────────────────────────────────────────
+// ── Main Editor App ───────────────────────────────────────────────────────────
 export default function Home() {
   const [activeId, setActiveId] = useState<FeatureId>("enhance");
 
   return (
     <BackendProvider>
-      <div className="relative h-screen overflow-hidden flex flex-col">
-        {/* Background orbs */}
-        <div className="bg-orb w-[700px] h-[700px] bg-violet-700/12 top-[-150px] left-[-250px]" />
-        <div className="bg-orb w-[500px] h-[500px] bg-purple-700/8 top-[45%] right-[-150px]" />
-        <div className="bg-orb w-[400px] h-[400px] bg-fuchsia-700/6 bottom-0 left-[35%]" />
+      <div
+        style={{
+          position: "relative",
+          height: "100vh",
+          overflow: "hidden",
+          display: "flex",
+          flexDirection: "column",
+          background: "var(--bg-void)",
+        }}
+      >
+        {/* Ambient orbs */}
+        <div className="bg-orb" style={{ width: 600, height: 600, background: "radial-gradient(circle, rgba(245,158,11,0.05) 0%, transparent 70%)", top: -200, left: -200 }} />
+        <div className="bg-orb" style={{ width: 500, height: 500, background: "radial-gradient(circle, rgba(6,182,212,0.04) 0%, transparent 70%)", top: "50%", right: -150 }} />
 
         <Header />
 
-        {/* Main layout */}
-        <div className="relative z-10 flex flex-1 pt-16 max-w-[1280px] mx-auto w-full overflow-hidden">
-          {/* Sidebar */}
+        {/* Main layout — pt for header (6px filmstrip + ~58px bar) */}
+        <div
+          style={{
+            position: "relative",
+            zIndex: 10,
+            display: "flex",
+            flex: 1,
+            paddingTop: 70,
+            maxWidth: 1320,
+            margin: "0 auto",
+            width: "100%",
+            overflow: "hidden",
+          }}
+        >
           <Sidebar activeId={activeId} onChange={setActiveId} />
 
-          {/* Content */}
-          <main className="flex-1 overflow-y-auto px-8 py-8 flex flex-col justify-between">
-            <div>
-              {/* Tool header breadcrumb */}
-              <div className="mb-6 flex justify-between items-center">
-                <div className="inline-flex items-center gap-2 text-xs text-zinc-600">
-                  <Link href="/" className="hover:text-zinc-400 transition-colors flex items-center gap-1">
-                    <ArrowLeft size={12} /> Dashboard
-                  </Link>
-                  <span>/</span>
-                  <span className="text-violet-400 font-medium capitalize">
-                    {activeId.replace("_", " ")}
-                  </span>
-                </div>
+          {/* Content area */}
+          <main
+            style={{
+              flex: 1,
+              overflowY: "auto",
+              padding: "28px 28px 24px",
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            {/* Breadcrumb */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: 20,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <Link
+                  href="/"
+                  style={{
+                    display: "flex", alignItems: "center", gap: 5,
+                    fontFamily: "var(--font-mono)",
+                    fontSize: "0.62rem",
+                    letterSpacing: "0.1em",
+                    color: "var(--text-dim)",
+                    textDecoration: "none",
+                    transition: "color 0.15s",
+                  }}
+                  className="hover:text-amber-500"
+                >
+                  <ArrowLeft size={11} />
+                  HOME
+                </Link>
+                <span style={{ color: "var(--border-medium)", fontFamily: "var(--font-mono)", fontSize: "0.62rem" }}>/</span>
+                <span
+                  style={{
+                    fontFamily: "var(--font-mono)",
+                    fontSize: "0.62rem",
+                    letterSpacing: "0.12em",
+                    color: "var(--amber)",
+                  }}
+                >
+                  {activeId.replace("_", " ").toUpperCase()}
+                </span>
               </div>
 
-              {/* Panel card */}
-              <div className="rounded-2xl border border-white/[0.08] bg-white/[0.025] backdrop-blur-xl shadow-2xl shadow-black/30 overflow-hidden">
-                <div className="h-px bg-gradient-to-r from-transparent via-violet-500/40 to-transparent" />
-                <div className="p-6 md:p-8">
-                  <ActivePanel id={activeId} />
-                </div>
+              {/* GPU tip in header */}
+              <div
+                style={{
+                  display: "flex", alignItems: "center", gap: 5,
+                  padding: "4px 10px",
+                  borderRadius: 6,
+                  background: "rgba(245,158,11,0.06)",
+                  border: "1px solid rgba(245,158,11,0.12)",
+                }}
+              >
+                <Zap size={10} style={{ color: "var(--amber)" }} />
+                <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.58rem", letterSpacing: "0.08em", color: "var(--text-dim)" }}>
+                  GPU SESSIONS LAST 9–12 HRS
+                </span>
               </div>
-
-              {/* Tip */}
-              <p className="text-center text-xs text-zinc-700 mt-5">
-                ⚡ GPU features require a connected Kaggle backend · Sessions last 9–12 hrs
-              </p>
             </div>
 
-            {/* Footer inside scroll area */}
-            <div className="border-t border-white/[0.04] pt-8 mt-12 text-center pb-2">
-              <p className="text-zinc-700 text-xs">
-                SnapStudio AI · 13 AI-powered tools · Frontend on <span className="text-zinc-500">Vercel</span> · GPU on <span className="text-zinc-500">Kaggle</span>
+            {/* Panel card */}
+            <div
+              style={{
+                borderRadius: 16,
+                border: "1px solid var(--border-subtle)",
+                background: "rgba(17,17,32,0.7)",
+                backdropFilter: "blur(20px)",
+                overflow: "hidden",
+                flex: 1,
+              }}
+            >
+              {/* Top accent */}
+              <div style={{ height: 1, background: "linear-gradient(90deg, transparent, rgba(245,158,11,0.3), transparent)" }} />
+
+              <div style={{ padding: "24px 28px" }}>
+                <ActivePanel id={activeId} />
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div
+              style={{
+                borderTop: "1px solid var(--border-subtle)",
+                paddingTop: 16,
+                marginTop: 16,
+                textAlign: "center",
+              }}
+            >
+              <p style={{ fontFamily: "var(--font-mono)", fontSize: "0.58rem", letterSpacing: "0.1em", color: "var(--text-dim)" }}>
+                SNAPSTUDIO AI · 13 AI-POWERED TOOLS · FRONTEND ON VERCEL · GPU ON KAGGLE
               </p>
             </div>
           </main>

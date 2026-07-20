@@ -45,33 +45,72 @@ export default function UploadZone({ onFile, preview, label = "Drop your photo h
   return (
     <div
       {...getRootProps()}
-      className={`relative h-72 rounded-2xl border-2 border-dashed transition-all duration-300 cursor-pointer overflow-hidden
-        ${isDragging
-          ? "border-violet-500 bg-violet-950/30 shadow-[0_0_40px_rgba(124,58,237,0.2)]"
+      style={{
+        position: "relative",
+        height: 280,
+        borderRadius: 14,
+        border: isDragging
+          ? "2px dashed var(--amber)"
           : preview
-          ? "border-white/10 bg-black/20"
-          : "border-white/10 bg-white/[0.02] hover:border-violet-500/50 hover:bg-violet-950/10"
-        }
-      `}
+          ? "1px solid var(--border-subtle)"
+          : "2px dashed var(--border-medium)",
+        background: isDragging
+          ? "rgba(245,158,11,0.06)"
+          : preview
+          ? "rgba(8,8,16,0.5)"
+          : "rgba(17,17,32,0.4)",
+        cursor: "pointer",
+        overflow: "hidden",
+        transition: "all 0.25s ease",
+        boxShadow: isDragging ? "0 0 40px rgba(245,158,11,0.12)" : "none",
+      }}
+      className={!isDragging && !preview ? "hover:border-amber-500/40 hover:bg-amber-950/10" : ""}
     >
       <input {...getInputProps()} />
+
       <AnimatePresence mode="wait">
         {preview ? (
           <motion.div
             key="preview"
-            initial={{ opacity: 0, scale: 0.95 }}
+            initial={{ opacity: 0, scale: 0.97 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0"
+            style={{ position: "absolute", inset: 0 }}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={preview} alt="Upload preview" className="w-full h-full object-contain" />
-            <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity duration-200 bg-black/50 backdrop-blur-sm">
-              <div className="flex flex-col items-center gap-2 text-white">
-                <Upload size={24} />
-                <span className="text-sm font-medium">Change photo</span>
-              </div>
+            <img src={preview} alt="Upload preview" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+
+            {/* Hover overlay */}
+            <div
+              style={{
+                position: "absolute", inset: 0,
+                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                gap: 8,
+                background: "rgba(8,8,16,0.65)",
+                opacity: 0,
+                transition: "opacity 0.2s",
+                backdropFilter: "blur(4px)",
+              }}
+              className="hover:opacity-100"
+            >
+              <Upload size={22} style={{ color: "var(--amber)" }} />
+              <span style={{ fontSize: "0.78rem", fontFamily: "var(--font-display)", fontWeight: 500, color: "var(--text-primary)" }}>
+                Replace photo
+              </span>
             </div>
+
+            {/* Corner frame decorations */}
+            {["top-0 left-0 border-t-2 border-l-2 rounded-tl-xl",
+              "top-0 right-0 border-t-2 border-r-2 rounded-tr-xl",
+              "bottom-0 left-0 border-b-2 border-l-2 rounded-bl-xl",
+              "bottom-0 right-0 border-b-2 border-r-2 rounded-br-xl",
+            ].map((cls, i) => (
+              <div
+                key={i}
+                className={`absolute w-5 h-5 ${cls}`}
+                style={{ borderColor: "rgba(245,158,11,0.4)" }}
+              />
+            ))}
           </motion.div>
         ) : (
           <motion.div
@@ -79,29 +118,53 @@ export default function UploadZone({ onFile, preview, label = "Drop your photo h
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6"
+            style={{
+              position: "absolute", inset: 0,
+              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+              gap: 14, padding: 24,
+            }}
           >
-            <div className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-colors duration-300
-              ${isDragging ? "bg-violet-600/30" : "bg-white/5"}`}>
-              <ImageIcon size={28} className={isDragging ? "text-violet-400" : "text-zinc-500"} />
+            {/* Icon container */}
+            <div
+              style={{
+                width: 64, height: 64,
+                borderRadius: 16,
+                border: `1px solid ${isDragging ? "var(--amber)" : "var(--border-medium)"}`,
+                background: isDragging ? "rgba(245,158,11,0.1)" : "rgba(255,255,255,0.025)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                transition: "all 0.25s",
+              }}
+            >
+              <ImageIcon size={26} style={{ color: isDragging ? "var(--amber)" : "var(--text-dim)" }} />
             </div>
-            <div className="text-center">
-              <p className="text-white/80 font-medium text-sm">{label}</p>
-              <p className="text-zinc-600 text-xs mt-1">or click to browse · JPG, PNG, WEBP</p>
+
+            <div style={{ textAlign: "center" }}>
+              <p
+                style={{
+                  fontFamily: "var(--font-display)",
+                  fontWeight: 500,
+                  fontSize: "0.83rem",
+                  color: isDragging ? "var(--amber)" : "var(--text-secondary)",
+                  marginBottom: 4,
+                  transition: "color 0.25s",
+                }}
+              >
+                {isDragging ? "Release to upload" : label}
+              </p>
+              <p
+                style={{
+                  fontFamily: "var(--font-mono)",
+                  fontSize: "0.62rem",
+                  letterSpacing: "0.08em",
+                  color: "var(--text-dim)",
+                }}
+              >
+                JPG · PNG · WEBP · click to browse
+              </p>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Corner accent when dragging */}
-      {isDragging && (
-        <div className="absolute inset-0 rounded-2xl pointer-events-none">
-          <div className="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-violet-500 rounded-tl-2xl" />
-          <div className="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-violet-500 rounded-tr-2xl" />
-          <div className="absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 border-violet-500 rounded-bl-2xl" />
-          <div className="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-violet-500 rounded-br-2xl" />
-        </div>
-      )}
     </div>
   );
 }
