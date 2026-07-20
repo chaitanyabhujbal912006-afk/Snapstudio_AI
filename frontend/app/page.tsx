@@ -179,9 +179,11 @@ export default function LandingPage() {
           </motion.div>
 
           {/* Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {FEATURES.map((feat, i) => {
               const Icon = feat.icon;
+              // Convert hex color to rgba for glow vars
+              const glowRgba = `${feat.color}99`; // 60% opacity
               return (
                 <motion.div
                   key={feat.name}
@@ -189,15 +191,55 @@ export default function LandingPage() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.45, delay: i * 0.04 }}
-                  whileHover={{ y: -3 }}
-                  className="group"
-                  style={{ borderRadius: 14, border: "1px solid var(--border-subtle)", background: "rgba(17,17,32,0.7)", padding: "18px 16px", cursor: "default", transition: "all 0.25s ease" }}
+                  className="glitter-card-wrap"
+                  style={{
+                    // Per-card accent color passed as CSS vars
+                    ["--card-glow" as string]: glowRgba,
+                    ["--card-glow-solid" as string]: feat.color,
+                  }}
                 >
-                  <div style={{ width: 38, height: 38, borderRadius: 10, background: feat.bg, border: `1px solid ${feat.color}25`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 12, transition: "transform 0.2s" }} className="group-hover:scale-110">
-                    <Icon size={16} style={{ color: feat.color }} />
+                  {/* Spinning conic glow ring */}
+                  <div className="glow-ring" />
+
+                  {/* Sparkle cross dots — 6 positions around card edges */}
+                  <span className="sparkle sparkle-tl" style={{ ["--card-glow" as string]: feat.color }} />
+                  <span className="sparkle sparkle-tr" style={{ ["--card-glow" as string]: feat.color }} />
+                  <span className="sparkle sparkle-ml" style={{ ["--card-glow" as string]: feat.color }} />
+                  <span className="sparkle sparkle-mr" style={{ ["--card-glow" as string]: feat.color }} />
+                  <span className="sparkle sparkle-bl" style={{ ["--card-glow" as string]: feat.color }} />
+                  <span className="sparkle sparkle-br" style={{ ["--card-glow" as string]: feat.color }} />
+
+                  {/* Side edge glow bars */}
+                  <div className="side-glow-left" />
+                  <div className="side-glow-right" />
+
+                  {/* Actual card content */}
+                  <div
+                    className="glitter-card-inner"
+                    style={{
+                      border: "1px solid var(--border-subtle)",
+                      background: "rgba(17,17,32,0.85)",
+                      padding: "18px 16px",
+                      cursor: "default",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 38, height: 38, borderRadius: 10,
+                        background: feat.bg,
+                        border: `1px solid ${feat.color}25`,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        marginBottom: 12,
+                        transition: "transform 0.2s, box-shadow 0.2s",
+                        boxShadow: "none",
+                      }}
+                      className="group-hover:scale-110"
+                    >
+                      <Icon size={16} style={{ color: feat.color }} />
+                    </div>
+                    <h3 style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: "0.8rem", color: "var(--text-primary)", marginBottom: 5 }}>{feat.name}</h3>
+                    <p style={{ fontSize: "0.7rem", color: "var(--text-dim)", lineHeight: 1.55 }}>{feat.desc}</p>
                   </div>
-                  <h3 style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: "0.8rem", color: "var(--text-primary)", marginBottom: 5 }}>{feat.name}</h3>
-                  <p style={{ fontSize: "0.7rem", color: "var(--text-dim)", lineHeight: 1.55 }}>{feat.desc}</p>
                 </motion.div>
               );
             })}

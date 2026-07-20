@@ -130,6 +130,29 @@ body::before {
   from { clip-path: inset(0 100% 0 0); }
   to   { clip-path: inset(0 0% 0 0); }
 }
+@keyframes border-spin {
+  from { --border-angle: 0deg; }
+  to   { --border-angle: 360deg; }
+}
+@keyframes sparkle-in {
+  0%   { opacity: 0; transform: scale(0) rotate(0deg); }
+  50%  { opacity: 1; transform: scale(1.2) rotate(90deg); }
+  100% { opacity: 0; transform: scale(0) rotate(180deg); }
+}
+@keyframes sparkle-drift {
+  0%   { opacity: 0; transform: translateY(0px) scale(0.3); }
+  30%  { opacity: 1; transform: translateY(-6px) scale(1); }
+  70%  { opacity: 0.8; transform: translateY(-12px) scale(0.8); }
+  100% { opacity: 0; transform: translateY(-20px) scale(0.2); }
+}
+@keyframes side-glow-pulse {
+  0%, 100% { opacity: 0; }
+  50%       { opacity: 1; }
+}
+@keyframes card-shimmer-sweep {
+  0%   { transform: translateX(-100%) skewX(-12deg); }
+  100% { transform: translateX(300%) skewX(-12deg); }
+}
 
 /* ─── Utility Classes ────────────────────────────────────────────────────────── */
 .font-display { font-family: var(--font-display); }
@@ -239,3 +262,184 @@ body::before {
   background: var(--bg-void);
   border: 1px solid rgba(255,255,255,0.06);
 }
+
+/* ─── @property for animatable angle (supported browsers only) ── */
+@property --border-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+/* ─── Glitter Card System ────────────────────────────────────────────────────── */
+
+/* Outer wrapper — positioning context for rotating glow + sparkles */
+.glitter-card-wrap {
+  position: relative;
+  border-radius: 14px;
+  /* Ensure the spinning bg is clipped to card shape */
+  isolation: isolate;
+}
+
+/*
+  Spinning border technique:
+  A pseudo-element that is larger than the card (scale trick),
+  contains a conic-gradient, sits behind the card, and rotates
+  continuously. The card clips it via overflow:hidden on the inner.
+  We use a dedicated .glow-ring div for browser compatibility.
+*/
+.glitter-card-wrap .glow-ring {
+  position: absolute;
+  inset: -2px;
+  border-radius: 16px;
+  z-index: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+.glitter-card-wrap .glow-ring::before {
+  content: '';
+  position: absolute;
+  /* Oversized square that rotates in place */
+  top: 50%; left: 50%;
+  width: 180%;
+  height: 180%;
+  transform: translate(-50%, -50%) rotate(0deg);
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    var(--card-glow-solid, #f59e0b) 40deg,
+    transparent 80deg,
+    transparent 180deg,
+    var(--card-glow-solid, #f59e0b) 220deg,
+    transparent 260deg,
+    transparent 360deg
+  );
+  animation: spin-ring 2.5s linear infinite;
+  opacity: 0.75;
+}
+/* Dark fill that creates the thin border effect */
+.glitter-card-wrap .glow-ring::after {
+  content: '';
+  position: absolute;
+  inset: 1.5px;
+  border-radius: 14px;
+  background: rgba(17,17,32,0.92);
+}
+
+.glitter-card-wrap:hover .glow-ring {
+  opacity: 1;
+}
+
+@keyframes spin-ring {
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* Inner card content layer */
+.glitter-card-inner {
+  position: relative;
+  z-index: 1;
+  border-radius: 13px;
+  overflow: hidden;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.glitter-card-wrap:hover .glitter-card-inner {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 32px rgba(0,0,0,0.35);
+}
+
+/* Shimmer sweep on hover */
+.glitter-card-inner::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 30%,
+    rgba(255,255,255,0.045) 50%,
+    transparent 70%
+  );
+  transform: translateX(-200%);
+  pointer-events: none;
+  z-index: 2;
+}
+.glitter-card-wrap:hover .glitter-card-inner::before {
+  animation: card-shimmer-sweep 0.75s ease forwards;
+}
+
+/* ── Sparkle cross dots — 6 positions on card edges ───────── */
+.sparkle {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  pointer-events: none;
+  z-index: 10;
+  opacity: 0;
+  display: block;
+}
+.sparkle::before,
+.sparkle::after {
+  content: '';
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--card-glow-solid, #f59e0b);
+  border-radius: 2px;
+  box-shadow: 0 0 5px 1px var(--card-glow, rgba(245,158,11,0.8));
+}
+/* Cross shape */
+.sparkle::before { width: 6px;   height: 1.5px; }
+.sparkle::after  { width: 1.5px; height: 6px; }
+
+.glitter-card-wrap:hover .sparkle { animation: sparkle-in 0.9s ease forwards; }
+
+.sparkle-tl { top: -3px; left: 12px; }
+.sparkle-tr { top: -3px; right: 12px; }
+.sparkle-bl { bottom: -3px; left: 12px; }
+.sparkle-br { bottom: -3px; right: 12px; }
+.sparkle-ml { top: 40%; left: -3px; }
+.sparkle-mr { top: 40%; right: -3px; }
+
+/* Stagger the sparkle animations */
+.sparkle-tl { animation-delay: 0.0s !important; }
+.sparkle-tr { animation-delay: 0.15s !important; }
+.sparkle-ml { animation-delay: 0.05s !important; }
+.sparkle-mr { animation-delay: 0.2s !important; }
+.sparkle-bl { animation-delay: 0.1s !important; }
+.sparkle-br { animation-delay: 0.25s !important; }
+
+/* ── Side edge glows ──────────────────────────────────────── */
+.side-glow-left {
+  position: absolute;
+  top: 10%;
+  bottom: 10%;
+  left: -1px;
+  width: 2px;
+  border-radius: 4px;
+  background: var(--card-glow-solid, #f59e0b);
+  box-shadow: 0 0 8px 2px var(--card-glow, rgba(245,158,11,0.5));
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: 2;
+  pointer-events: none;
+}
+.side-glow-right {
+  position: absolute;
+  top: 10%;
+  bottom: 10%;
+  right: -1px;
+  width: 2px;
+  border-radius: 4px;
+  background: var(--card-glow-solid, #f59e0b);
+  box-shadow: 0 0 8px 2px var(--card-glow, rgba(245,158,11,0.5));
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: 2;
+  pointer-events: none;
+}
+.glitter-card-wrap:hover .side-glow-left,
+.glitter-card-wrap:hover .side-glow-right {
+  opacity: 1;
+  animation: side-glow-pulse 1.6s ease-in-out infinite;
+}
+
