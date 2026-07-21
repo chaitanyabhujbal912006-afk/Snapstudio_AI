@@ -4,241 +4,429 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import CompareSlider from "@/app/components/CompareSlider";
 import {
-  Sparkles, SlidersHorizontal, UserCheck, Wind, Wand2,
-  Maximize2, Scan, ArrowUpFromLine, ImageIcon, Palette, Eraser, Zap, Type, ArrowRight, GitBranch
+  Sparkles, SlidersHorizontal, UserCheck, Maximize2, ArrowUpFromLine,
+  ImageIcon, Palette, Eraser, Zap, Type, ArrowRight, GitBranch, Terminal
 } from "lucide-react";
 
-const FEATURES = [
-  { icon: Sparkles,          name: "Auto-Enhance",      desc: "One-click light & tone correction",        color: "#06b6d4", bg: "rgba(6,182,212,0.1)"    },
-  { icon: SlidersHorizontal, name: "Pro Color Grading", desc: "15 Hollywood-grade color curves",           color: "#f59e0b", bg: "rgba(245,158,11,0.1)"   },
-  { icon: UserCheck,         name: "Portrait Retouch",  desc: "Skin-smoothing, teeth-whitening",           color: "#34d399", bg: "rgba(52,211,153,0.1)"   },
-  { icon: Maximize2,         name: "Swin2SR Upscale",   desc: "True 4× resolution restorer",               color: "#f97316", bg: "rgba(249,115,22,0.1)"   },
-  { icon: ArrowUpFromLine,   name: "Bokeh Depth Blur",  desc: "DSLR-style focus fields via MiDaS",         color: "#ec4899", bg: "rgba(236,72,153,0.1)"   },
-  { icon: ImageIcon,         name: "Background Swap",   desc: "AI product & portrait environment builder", color: "#8b5cf6", bg: "rgba(139,92,246,0.1)"   },
-  { icon: Palette,           name: "Style Filters",     desc: "Ghibli, sketch & oil painting transfers",   color: "#f59e0b", bg: "rgba(245,158,11,0.1)"   },
-  { icon: Eraser,            name: "Object Removal",    desc: "AI mask-inpainting removal tool",           color: "#94a3b8", bg: "rgba(148,163,184,0.1)"  },
-  { icon: Zap,               name: "Extend Canvas",     desc: "Generative outpainting canvas",             color: "#a78bfa", bg: "rgba(167,139,250,0.1)"  },
-  { icon: Type,              name: "Text → Image",      desc: "Lightning-fast SDXL-Turbo generator",       color: "#fb923c", bg: "rgba(251,146,60,0.1)"   },
+// Feature specs mapping to their Bento Grid columns and custom mockup renders
+const BENTO_FEATURES = [
+  {
+    icon: Type,
+    name: "Text → Image Engine",
+    desc: "Lightning-fast SDXL-Turbo text-to-image generator",
+    color: "#f59e0b",
+    bg: "rgba(245,158,11,0.06)",
+    colSpan: "md:col-span-2",
+    mockup: (
+      <div className="mt-4 w-full bg-black/40 border border-white/[0.06] rounded-xl p-3 flex flex-col gap-2.5">
+        <div className="flex items-center justify-between border-b border-white/[0.04] pb-2 text-[0.62rem] text-zinc-500 font-mono">
+          <span>PROMPT BUILDER</span>
+          <span className="text-amber-500">SDXL_TURBO_v1.0</span>
+        </div>
+        <div className="bg-zinc-900/60 border border-white/[0.04] rounded-lg p-2 flex items-center justify-between text-[0.7rem] text-zinc-300 font-mono">
+          <span>/imagine cyberpunk portrait of an android, neon rim light</span>
+          <span className="bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded text-[0.55rem] font-bold">GENERATE</span>
+        </div>
+        <div className="flex gap-2">
+          <div className="h-16 w-full rounded-lg bg-gradient-to-r from-violet-950/30 via-amber-950/20 to-cyan-950/30 border border-white/[0.03] relative overflow-hidden flex items-center justify-center">
+            <div className="absolute inset-0 bg-shimmer-sweep animate-[pulse_3s_infinite]" />
+            <span className="text-[0.6rem] text-zinc-500 font-mono">Status: Done in 0.8s</span>
+          </div>
+        </div>
+      </div>
+    )
+  },
+  {
+    icon: Sparkles,
+    name: "Auto-Enhance",
+    desc: "One-click brightness & tone correction",
+    color: "#06b6d4",
+    bg: "rgba(6,182,212,0.06)",
+    colSpan: "md:col-span-1",
+    mockup: (
+      <div className="mt-4 w-full flex flex-col gap-2">
+        <div className="flex justify-between items-center text-[0.62rem] font-mono text-zinc-400">
+          <span>CORRECTION LEVEL</span>
+          <span className="text-cyan-400 font-bold">85%</span>
+        </div>
+        <div className="h-1.5 w-full bg-zinc-900 rounded-full overflow-hidden border border-white/[0.04]">
+          <div className="h-full bg-cyan-500 rounded-full" style={{ width: "85%" }} />
+        </div>
+        <div className="flex gap-1.5 mt-1">
+          <span className="text-[0.6rem] px-2 py-0.5 rounded bg-zinc-800 border border-white/[0.05] text-zinc-300">Natural</span>
+          <span className="text-[0.6rem] px-2 py-0.5 rounded bg-cyan-950/30 border border-cyan-800/30 text-cyan-400 font-medium">Vivid Pro</span>
+        </div>
+      </div>
+    )
+  },
+  {
+    icon: Maximize2,
+    name: "Swin2SR Upscale",
+    desc: "True 4× resolution restoration engine",
+    color: "#fb923c",
+    bg: "rgba(251,146,60,0.06)",
+    colSpan: "md:col-span-1",
+    mockup: (
+      <div className="mt-4 w-full flex flex-col items-center justify-center p-2.5 rounded-xl bg-orange-950/15 border border-orange-500/10 text-center">
+        <span className="text-2xl font-bold font-display text-orange-400 tracking-tight">4K UHD</span>
+        <span className="text-[0.58rem] font-mono text-zinc-500 tracking-widest mt-1 uppercase">Super-resolution active</span>
+      </div>
+    )
+  },
+  {
+    icon: ImageIcon,
+    name: "Background Swap",
+    desc: "AI product & portrait environment builder",
+    color: "#8b5cf6",
+    bg: "rgba(139,92,246,0.06)",
+    colSpan: "md:col-span-2",
+    mockup: (
+      <div className="mt-4 w-full flex flex-col gap-2.5">
+        <div className="flex justify-between items-center text-[0.62rem] text-zinc-400 font-mono">
+          <span>ENVIRONMENT PRESETS</span>
+          <span>4 ACTIVE</span>
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          <span className="text-[0.6rem] px-2 py-1 rounded-lg bg-zinc-900 border border-white/[0.05] text-zinc-400">🏔 Mountain Mist</span>
+          <span className="text-[0.6rem] px-2 py-1 rounded-lg bg-violet-950/20 border border-violet-500/20 text-violet-300 font-medium">🛋 Studio Light</span>
+          <span className="text-[0.6rem] px-2 py-1 rounded-lg bg-zinc-900 border border-white/[0.05] text-zinc-400">🌃 Cyber Street</span>
+          <span className="text-[0.6rem] px-2 py-1 rounded-lg bg-zinc-900 border border-white/[0.05] text-zinc-400">🏖 Sunset Glow</span>
+        </div>
+      </div>
+    )
+  },
+  {
+    icon: Eraser,
+    name: "Object Removal",
+    desc: "AI mask-inpainting deletion brush",
+    color: "#94a3b8",
+    bg: "rgba(148,163,184,0.06)",
+    colSpan: "md:col-span-1",
+    mockup: (
+      <div className="mt-4 w-full bg-black/30 border border-white/[0.04] rounded-xl p-2.5 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="h-6 w-6 rounded-full bg-red-500/15 border border-red-500/30 flex items-center justify-center text-[0.65rem] text-red-400 font-bold">⚡</span>
+          <div className="flex flex-col">
+            <span className="text-[0.65rem] text-zinc-300 font-medium">Brush Selection</span>
+            <span className="text-[0.55rem] text-zinc-500 font-mono">Size: 24px</span>
+          </div>
+        </div>
+        <span className="text-[0.6rem] font-bold text-red-400 uppercase tracking-wider font-mono">ERASE MASK</span>
+      </div>
+    )
+  },
+  {
+    icon: Zap,
+    name: "Extend Canvas",
+    desc: "Generative outpainting editor workspace",
+    color: "#a78bfa",
+    bg: "rgba(167,139,250,0.06)",
+    colSpan: "md:col-span-1",
+    mockup: (
+      <div className="mt-4 w-full bg-black/40 border border-white/[0.05] aspect-[2/1] rounded-xl relative overflow-hidden flex items-center justify-center">
+        <div className="absolute h-[80%] w-[50%] border border-dashed border-violet-500/40 rounded flex items-center justify-center">
+          <span className="text-[0.5rem] text-violet-400 font-mono uppercase tracking-wider">Crop 1:1</span>
+        </div>
+        <div className="absolute top-2 right-2 text-[0.5rem] font-mono text-zinc-500">OUTPAINT: 16:9</div>
+      </div>
+    )
+  },
+  {
+    icon: SlidersHorizontal,
+    name: "Curves & Levels",
+    desc: "15 Hollywood-grade grading profiles",
+    color: "#eab308",
+    bg: "rgba(234,179,8,0.06)",
+    colSpan: "md:col-span-1",
+    mockup: (
+      <div className="mt-4 w-full bg-black/40 border border-white/[0.04] rounded-xl p-2.5">
+        <div className="h-10 w-full relative">
+          <svg className="h-full w-full stroke-amber-500/70 fill-none" viewBox="0 0 100 40">
+            <path d="M0,40 C20,30 40,10 60,8 C80,6 100,0 100,0" strokeWidth="1.5" />
+            <line x1="0" y1="0" x2="100" y2="40" stroke="rgba(255,255,255,0.05)" strokeDasharray="2,2" />
+          </svg>
+        </div>
+        <div className="flex justify-between items-center text-[0.55rem] font-mono text-zinc-500 mt-1">
+          <span>MONO LEVELS</span>
+          <span className="text-amber-500 font-bold">LUT_GOLDEN_HOUR</span>
+        </div>
+      </div>
+    )
+  },
+  {
+    icon: ArrowUpFromLine,
+    name: "Depth Bokeh",
+    desc: "Bokeh focus fields via MiDaS mapping",
+    color: "#ec4899",
+    bg: "rgba(236,72,153,0.06)",
+    colSpan: "md:col-span-1",
+    mockup: (
+      <div className="mt-4 w-full flex items-center justify-between bg-zinc-900/50 border border-white/[0.05] p-2 rounded-xl">
+        <span className="text-[0.62rem] text-zinc-400 font-mono">FOCAL DEPTH</span>
+        <div className="flex gap-1">
+          <span className="text-[0.55rem] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400">f2.8</span>
+          <span className="text-[0.55rem] px-1.5 py-0.5 rounded bg-pink-950/30 border border-pink-500/30 text-pink-400 font-bold">f1.4</span>
+        </div>
+      </div>
+    )
+  },
+  {
+    icon: UserCheck,
+    name: "Portrait Retouch",
+    desc: "Skin-smoothing, red-eye & face maps",
+    color: "#34d399",
+    bg: "rgba(52,211,153,0.06)",
+    colSpan: "md:col-span-1",
+    mockup: (
+      <div className="mt-4 w-full flex flex-col gap-1.5">
+        <div className="flex justify-between items-center text-[0.58rem] text-zinc-500 font-mono">
+          <span>FACIAL MAPPING</span>
+          <span className="text-emerald-400">READY</span>
+        </div>
+        <div className="flex gap-2 items-center">
+          <div className="h-6 w-6 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-[0.6rem] text-emerald-400">
+            ✓
+          </div>
+          <span className="text-[0.65rem] text-zinc-300 font-mono">Skin Correct (Smooth: 60%)</span>
+        </div>
+      </div>
+    )
+  },
+  {
+    icon: Palette,
+    name: "Style Filters",
+    desc: "Anime Ghibli, sketch & oil transfers",
+    color: "#38bdf8",
+    bg: "rgba(56,189,248,0.06)",
+    colSpan: "md:col-span-1",
+    mockup: (
+      <div className="mt-4 w-full flex gap-1.5">
+        <div className="flex-1 bg-sky-950/20 border border-sky-500/20 rounded-lg p-1.5 text-center flex flex-col items-center">
+          <span className="text-[0.55rem] text-sky-400 font-bold">Ghibli</span>
+        </div>
+        <div className="flex-1 bg-zinc-900 border border-white/[0.04] rounded-lg p-1.5 text-center flex flex-col items-center">
+          <span className="text-[0.55rem] text-zinc-500">Classic Oil</span>
+        </div>
+      </div>
+    )
+  }
 ];
 
 const STEPS = [
-  { n: "01", title: "Launch Kaggle GPU Node",  desc: "Upload kaggle_notebook.ipynb. Activate GPU & Internet, then run the server cell.", icon: "🖥" },
-  { n: "02", title: "Bind Public Endpoint",    desc: "Copy the Gradio URL printed at the end of the Kaggle notebook.",                    icon: "🔗" },
-  { n: "03", title: "Begin Generating",        desc: "Paste the live link inside SnapStudio, unlock dual GPU engines, and create.",        icon: "⚡" },
+  { n: "01", title: "Launch Kaggle GPU Node", desc: "Upload kaggle_notebook.ipynb. Activate GPU P100/T4 & Internet, then run the notebook cell.", icon: <Terminal size={18} /> },
+  { n: "02", title: "Bind Public Endpoint", desc: "Copy the Gradio URL printed at the end of the Kaggle backend notebook.", icon: <GitBranch size={18} /> },
+  { n: "03", title: "Begin Generating", desc: "Paste the live link inside SnapStudio, register GPU engines, and edit images.", icon: <Sparkles size={18} /> },
 ];
-
-function FilmHoles({ count = 12 }: { count?: number }) {
-  return (
-    <div className="flex items-center gap-2">
-      {Array.from({ length: count }).map((_, i) => (
-        <div
-          key={i}
-          className="flex-shrink-0"
-          style={{ width: 14, height: 5, borderRadius: 2, background: "rgba(0,0,0,0.55)", border: "1px solid rgba(255,255,255,0.07)" }}
-        />
-      ))}
-    </div>
-  );
-}
 
 export default function LandingPage() {
   return (
-    <div className="relative min-h-screen overflow-x-hidden" style={{ background: "var(--bg-void)", color: "var(--text-primary)", fontFamily: "var(--font-body)" }}>
+    <div className="relative min-h-screen overflow-x-hidden bg-black text-[#f5f5f7] select-none" style={{ fontFamily: "var(--font-body)" }}>
 
-      {/* ── AMBIENT ORBS ─────────────────────────────────────────── */}
-      <div className="bg-orb" style={{ width: 700, height: 700, background: "radial-gradient(circle, rgba(245,158,11,0.07) 0%, transparent 70%)", top: -200, left: -200, animation: "float-slow 22s ease-in-out infinite" }} />
-      <div className="bg-orb" style={{ width: 500, height: 500, background: "radial-gradient(circle, rgba(6,182,212,0.06) 0%, transparent 70%)", top: "40%", right: -150, animation: "float-med 28s ease-in-out infinite" }} />
-      <div className="bg-orb" style={{ width: 400, height: 400, background: "radial-gradient(circle, rgba(139,92,246,0.05) 0%, transparent 70%)", bottom: 0, left: "25%", animation: "float-slow 35s ease-in-out infinite reverse" }} />
+      {/* ── BACKGROUND LIGHTING SPEC ─────────────────────────────── */}
+      <div className="absolute top-[-10%] left-[-10%] w-[60%] aspect-square rounded-full bg-[radial-gradient(circle_at_center,rgba(217,119,6,0.06)_0%,transparent_70%)] blur-[120px] pointer-events-none z-0" />
+      <div className="absolute top-[35%] right-[-10%] w-[50%] aspect-square rounded-full bg-[radial-gradient(circle_at_center,rgba(8,145,178,0.04)_0%,transparent_70%)] blur-[120px] pointer-events-none z-0" />
+      <div className="absolute bottom-[-5%] left-[20%] w-[55%] aspect-square rounded-full bg-[radial-gradient(circle_at_center,rgba(217,119,6,0.03)_0%,transparent_70%)] blur-[120px] pointer-events-none z-0" />
 
-      {/* ── NAVBAR ───────────────────────────────────────────────── */}
-      <header className="fixed top-0 left-0 right-0 z-50" style={{ background: "rgba(8,8,16,0.82)", backdropFilter: "blur(24px)", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-        {/* Film strip row */}
-        <div className="flex items-center overflow-hidden px-4" style={{ height: 8, background: "var(--bg-raised)", borderBottom: "1px solid rgba(255,255,255,0.04)", gap: 8 }}>
-          {Array.from({ length: 50 }).map((_, i) => (
-            <div key={i} className="flex-shrink-0" style={{ width: 14, height: 5, borderRadius: 2, background: "rgba(0,0,0,0.55)", border: "1px solid rgba(255,255,255,0.07)" }} />
-          ))}
-        </div>
-        <div className="w-full max-w-6xl mx-auto px-6 py-3 flex items-center justify-between">
-          {/* Logo */}
-          <div className="flex items-center gap-3 cursor-default">
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg, #f59e0b, #d97706)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 16px rgba(245,158,11,0.3)" }}>
-              <span style={{ fontSize: 17, fontWeight: 900, color: "#1a0e00", fontFamily: "var(--font-display)" }}>S</span>
+      {/* ── NAV BAR (Apple Style Header) ─────────────────────────── */}
+      <header className="fixed top-0 left-0 right-0 z-50 bg-[#000000]/70 backdrop-blur-[24px] border-b border-white/[0.06] h-[52px] flex items-center">
+        <div className="w-full max-w-5xl mx-auto px-6 flex items-center justify-between">
+          <div className="flex items-center gap-2.5 cursor-pointer">
+            <div className="w-6 h-6 rounded-md bg-[#ffffff] flex items-center justify-center shadow-md">
+              <span className="text-[0.75rem] font-bold text-black font-display">S</span>
             </div>
-            <div style={{ lineHeight: 1 }}>
-              <span style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "0.95rem", letterSpacing: "0.02em", color: "var(--text-primary)", display: "block" }}>
-                Snap<span style={{ color: "var(--amber)" }}>Studio</span>
+            <div className="leading-[1.1]">
+              <span className="font-display font-medium text-[0.8rem] tracking-tight text-[#f5f5f7]">
+                Snap<span className="text-amber-500 font-semibold">Studio</span>
               </span>
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.58rem", color: "var(--amber)", letterSpacing: "0.16em", display: "block", marginTop: 1 }}>AI · STUDIO</span>
             </div>
           </div>
-          {/* Nav */}
-          <nav className="flex items-center gap-4">
-            <Link href="https://github.com/chaitanyabhujbal912006-afk/Snapstudio_AI" target="_blank" style={{ color: "var(--text-dim)", display: "flex", alignItems: "center", transition: "color 0.2s" }} className="hover:text-amber-400">
-              <GitBranch size={16} />
+          <nav className="flex items-center gap-6 text-[0.75rem] font-medium text-[#86868b]">
+            <Link href="https://github.com/chaitanyabhujbal912006-afk/Snapstudio_AI" target="_blank" className="hover:text-[#f5f5f7] transition-colors duration-200 flex items-center gap-1.5">
+              <GitBranch size={13} />
+              GitHub
             </Link>
-            <Link href="/editor" style={{ padding: "7px 15px", borderRadius: 8, fontSize: "0.75rem", fontWeight: 600, fontFamily: "var(--font-display)", letterSpacing: "0.04em", background: "rgba(245,158,11,0.1)", color: "var(--amber)", border: "1px solid rgba(245,158,11,0.25)", textDecoration: "none", transition: "all 0.2s" }} className="hover:bg-amber-500/20">
-              Open Workspace ↗
+            <Link href="/editor" className="inline-flex items-center justify-center px-3.5 py-1.5 rounded-full bg-white text-black font-semibold tracking-tight hover:scale-[1.03] active:scale-[0.98] transition-all duration-200">
+              Open Studio ↗
             </Link>
           </nav>
         </div>
       </header>
 
-      {/* ── HERO ─────────────────────────────────────────────────── */}
-      <section className="relative z-10 w-full flex flex-col items-center text-center px-6" style={{ paddingTop: "clamp(120px, 22vh, 180px)", paddingBottom: 80 }}>
-        {/* Badge */}
-        <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-          className="inline-flex items-center gap-2 mb-7"
-          style={{ padding: "5px 14px", borderRadius: 100, background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)" }}>
-          <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--amber)", boxShadow: "0 0 8px rgba(245,158,11,0.6)", display: "inline-block", animation: "pulse-glow 2s ease-in-out infinite" }} />
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.65rem", letterSpacing: "0.16em", color: "var(--amber)" }}>13 AI ENGINES · ZERO CPU LATENCY</span>
+      {/* ── HERO SECTION ────────────────────────────────────────── */}
+      <section className="relative z-10 w-full flex flex-col items-center text-center px-6 pt-[140px] pb-16">
+        {/* Glow pill */}
+        <motion.div
+          initial={{ opacity: 0, y: -12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          className="inline-flex items-center gap-2 mb-7 px-4 py-1.5 rounded-full bg-zinc-950 border border-white/[0.06] shadow-[0_4px_12px_rgba(0,0,0,0.5)]"
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)] animate-pulse" />
+          <span className="font-mono text-[0.58rem] tracking-[0.18em] text-zinc-400 font-bold uppercase">13 AI ENGINES · ZERO LATENCY RUNTIME</span>
         </motion.div>
 
-        {/* Headline */}
-        <motion.h1 initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.1 }}
-          className="w-full max-w-4xl mx-auto"
-          style={{ fontFamily: "var(--font-display)", fontSize: "clamp(2.4rem, 6vw, 5.2rem)", fontWeight: 800, lineHeight: 1.06, letterSpacing: "-0.025em" }}>
-          <span style={{ color: "var(--text-primary)" }}>Your Images.</span>
+        {/* Apple Style Headline */}
+        <motion.h1
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+          className="w-full max-w-4xl mx-auto font-display font-semibold tracking-tighter"
+          style={{ fontSize: "clamp(2.5rem, 6.5vw, 5rem)", lineHeight: 1.05 }}
+        >
+          <span className="bg-gradient-to-b from-white to-[#86868b] bg-clip-text text-transparent">Your Images.</span>
           <br />
           <span className="shimmer-text">Reborn in the Studio.</span>
         </motion.h1>
 
-        {/* Sub */}
-        <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.22 }}
-          className="w-full max-w-xl mx-auto mt-6"
-          style={{ color: "var(--text-secondary)", fontSize: "1rem", lineHeight: 1.72 }}>
-          A professional-grade sandbox of{" "}
-          <span style={{ color: "var(--text-primary)" }}>editing, restoration, and diffusion engines</span>{" "}
-          — all running on free Kaggle GPU nodes.
+        {/* Subtext */}
+        <motion.p
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.22, ease: [0.16, 1, 0.3, 1] }}
+          className="w-full max-w-xl mx-auto mt-6 text-[#86868b] font-light"
+          style={{ fontSize: "clamp(0.95rem, 1.8vw, 1.1rem)", lineHeight: 1.6 }}
+        >
+          A state-of-the-art computational workspace for <span className="text-[#f5f5f7] font-medium">neural photography editing, diffusion, and enhancement</span> — running on cloud GPU instances.
         </motion.p>
 
-        {/* CTA row */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.34 }}
-          className="flex items-center justify-center flex-wrap gap-3 mt-9">
-          <Link href="/editor" className="btn-studio" style={{ fontSize: "0.875rem", padding: "13px 26px" }}>
-            Launch SnapStudio <ArrowRight size={16} />
+        {/* CTA Buttons */}
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.32, ease: [0.16, 1, 0.3, 1] }}
+          className="flex items-center justify-center flex-wrap gap-4 mt-10"
+        >
+          <Link href="/editor" className="btn-studio">
+            Begin Editing <ArrowRight size={15} />
           </Link>
-          <Link href="https://github.com/chaitanyabhujbal912006-afk/Snapstudio_AI" target="_blank" className="btn-ghost" style={{ fontSize: "0.875rem", padding: "13px 20px" }}>
-            <GitBranch size={15} /> View on GitHub
+          <Link href="https://github.com/chaitanyabhujbal912006-afk/Snapstudio_AI" target="_blank" className="btn-ghost">
+            View Source Code
           </Link>
         </motion.div>
 
-        {/* Stats */}
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8, delay: 0.5 }}
-          className="flex items-center justify-center flex-wrap gap-10 mt-12">
-          {[{ v: "13", l: "AI MODELS" }, { v: "4×", l: "UPSCALING" }, { v: "Free", l: "GPU RUNTIME" }].map((s) => (
+        {/* Stats Row */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 1, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
+          className="flex items-center justify-center flex-wrap gap-x-12 gap-y-6 mt-16 border-t border-white/[0.06] pt-10 w-full max-w-2xl mx-auto"
+        >
+          {[{ v: "13", l: "INTEGRATED ENGINE INTERFACES" }, { v: "4×", l: "NEURAL RESOLUTION Restorer" }, { v: "0ms", l: "CPU PROCESSING OVERHEAD" }].map((s) => (
             <div key={s.l} className="text-center">
-              <p style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "1.5rem", color: "var(--amber)" }}>{s.v}</p>
-              <p style={{ fontSize: "0.62rem", color: "var(--text-dim)", letterSpacing: "0.12em", marginTop: 3 }}>{s.l}</p>
+              <p className="font-display font-medium text-lg text-white">{s.v}</p>
+              <p className="text-[0.55rem] text-[#86868b] tracking-[0.16em] uppercase mt-1">{s.l}</p>
             </div>
           ))}
         </motion.div>
       </section>
 
-      {/* ── COMPARE SLIDER ───────────────────────────────────────── */}
-      <section className="relative z-10 w-full px-6 pb-28">
+      {/* ── COMPARE SLIDER DISPLAY PRELUDE ──────────────────────── */}
+      <section className="relative z-10 w-full px-6 pb-20">
         <div className="w-full max-w-4xl mx-auto">
-          <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.8 }}>
-            {/* Gradient border frame */}
-            <div className="w-full" style={{ padding: 2, borderRadius: 20, background: "linear-gradient(135deg, rgba(245,158,11,0.4), rgba(139,92,246,0.2), rgba(6,182,212,0.2))", boxShadow: "0 0 80px rgba(245,158,11,0.08), 0 40px 80px rgba(0,0,0,0.5)" }}>
-              <div className="w-full" style={{ borderRadius: 18, overflow: "hidden", background: "var(--bg-surface)" }}>
-                {/* Frame header */}
-                <div className="flex items-center justify-between px-4" style={{ height: 36, borderBottom: "1px solid rgba(255,255,255,0.05)", background: "var(--bg-raised)" }}>
-                  <FilmHoles count={6} />
-                  <div className="flex items-center gap-2">
-                    <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", color: "var(--text-dim)", letterSpacing: "0.1em" }}>BEFORE / AFTER</span>
-                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--amber)", boxShadow: "0 0 6px rgba(245,158,11,0.6)" }} />
-                  </div>
-                  <FilmHoles count={6} />
+          <motion.div
+            initial={{ opacity: 0, y: 25 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+          >
+            {/* Monitor bezel bezel container */}
+            <div className="w-full bg-[#0d0d10] border border-[#27272a] rounded-[24px] overflow-hidden p-3 shadow-[0_24px_60px_rgba(0,0,0,0.8)]">
+              {/* Header inside screen mockup */}
+              <div className="flex items-center justify-between px-3 pb-3 border-b border-white/[0.04]">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-red-500/20 border border-red-500/40" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-yellow-500/20 border border-yellow-500/40" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-green-500/20 border border-green-500/40" />
                 </div>
-                {/* Slider */}
-                <div className="p-3">
-                  <CompareSlider beforeImg="/before.png" afterImg="/after.png" />
+                <div className="text-[0.58rem] text-zinc-500 font-mono tracking-[0.1em] uppercase">
+                  RENDER ENGINE PREVIEW · DUAL STAGE SHOT
                 </div>
+                <div className="w-10" />
+              </div>
+              <div className="mt-3 overflow-hidden rounded-xl">
+                <CompareSlider beforeImg="/before.png" afterImg="/after.png" />
               </div>
             </div>
-            <p className="text-center mt-4" style={{ fontFamily: "var(--font-mono)", fontSize: "0.62rem", color: "var(--text-dim)", letterSpacing: "0.08em" }}>
-              ↔ DRAG TO COMPARE · Neon studio transform via ControlNet + SDXL
+            <p className="text-center mt-4 font-mono text-[0.58rem] tracking-[0.1em] text-zinc-500">
+              ↔ DRAG SLIDER CONTROLS · CONTROLNET STYLING RENDER BUFFER MATCH
             </p>
           </motion.div>
         </div>
       </section>
 
-      {/* ── FEATURES GRID ────────────────────────────────────────── */}
-      <section className="relative z-10 w-full py-24" style={{ borderTop: "1px solid var(--border-subtle)", borderBottom: "1px solid var(--border-subtle)", background: "linear-gradient(180deg, rgba(17,17,32,0.6) 0%, rgba(12,12,22,0.8) 100%)" }}>
-        <div className="w-full max-w-6xl mx-auto px-6">
-          {/* Heading */}
-          <motion.div initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }}
-            className="text-center mb-14">
-            <p style={{ fontFamily: "var(--font-mono)", fontSize: "0.65rem", letterSpacing: "0.2em", color: "var(--amber)", marginBottom: 12 }}>CREATIVE SUITE</p>
-            <h2 style={{ fontFamily: "var(--font-display)", fontSize: "clamp(1.6rem, 3vw, 2.5rem)", fontWeight: 700, letterSpacing: "-0.02em", color: "var(--text-primary)" }}>
-              13 Dedicated AI Engines
+      {/* ── BENTO GRID FEATURES SHOWCASE ─────────────────────────── */}
+      <section className="relative z-10 w-full py-24 border-t border-white/[0.06] bg-[#030303]">
+        <div className="w-full max-w-5xl mx-auto px-6">
+          {/* Header */}
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            className="text-center mb-16"
+          >
+            <p className="font-mono text-[0.58rem] tracking-[0.2em] text-amber-500 font-bold uppercase mb-3">CREATIVE PIPELINE</p>
+            <h2 className="font-display font-medium text-[1.8rem] md:text-[2.2rem] tracking-tight text-white">
+              Sleek AI Modules. Pro Control.
             </h2>
-            <p className="mt-3" style={{ color: "var(--text-secondary)", fontSize: "0.9rem" }}>
-              From instant CPU edits to long-running GPU diffusion — everything in one workspace.
+            <p className="mt-3 text-zinc-500 text-[0.85rem] max-w-md mx-auto leading-relaxed">
+              Every stage of your image lifecycle running with hardware-accelerated precision interfaces.
             </p>
           </motion.div>
 
-          {/* Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {FEATURES.map((feat, i) => {
+          {/* Bento Layout Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {BENTO_FEATURES.map((feat, i) => {
               const Icon = feat.icon;
-              // Convert hex color to rgba for glow vars
-              const glowRgba = `${feat.color}99`; // 60% opacity
               return (
                 <motion.div
                   key={feat.name}
-                  initial={{ opacity: 0, y: 16 }}
+                  initial={{ opacity: 0, y: 15 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
-                  transition={{ duration: 0.45, delay: i * 0.04 }}
-                  className="glitter-card-wrap"
+                  transition={{ duration: 0.6, delay: i * 0.05, ease: [0.16, 1, 0.3, 1] }}
+                  className={`glitter-card-wrap ${feat.colSpan} group`}
                   style={{
-                    // Per-card accent color passed as CSS vars
-                    ["--card-glow" as string]: glowRgba,
+                    ["--card-glow" as string]: `${feat.color}40`,
                     ["--card-glow-solid" as string]: feat.color,
                   }}
                 >
-                  {/* Spinning conic glow ring */}
+                  {/* Rotating border lighting glow */}
                   <div className="glow-ring" />
 
-                  {/* Sparkle cross dots — 6 positions around card edges */}
-                  <span className="sparkle sparkle-tl" style={{ ["--card-glow" as string]: feat.color }} />
-                  <span className="sparkle sparkle-tr" style={{ ["--card-glow" as string]: feat.color }} />
-                  <span className="sparkle sparkle-ml" style={{ ["--card-glow" as string]: feat.color }} />
-                  <span className="sparkle sparkle-mr" style={{ ["--card-glow" as string]: feat.color }} />
-                  <span className="sparkle sparkle-bl" style={{ ["--card-glow" as string]: feat.color }} />
-                  <span className="sparkle sparkle-br" style={{ ["--card-glow" as string]: feat.color }} />
+                  {/* Edge sparkle accents (conforming to style spec alignment) */}
+                  <span className="sparkle sparkle-tl" style={{ ["--card-glow-solid" as string]: feat.color }} />
+                  <span className="sparkle sparkle-tr" style={{ ["--card-glow-solid" as string]: feat.color }} />
+                  <span className="sparkle sparkle-bl" style={{ ["--card-glow-solid" as string]: feat.color }} />
+                  <span className="sparkle sparkle-br" style={{ ["--card-glow-solid" as string]: feat.color }} />
 
-                  {/* Side edge glow bars */}
-                  <div className="side-glow-left" />
-                  <div className="side-glow-right" />
-
-                  {/* Actual card content */}
+                  {/* Translucent Bento Panel Container */}
                   <div
-                    className="glitter-card-inner"
+                    className="glitter-card-inner h-full flex flex-col justify-between"
                     style={{
-                      border: "1px solid var(--border-subtle)",
-                      background: "rgba(17,17,32,0.85)",
-                      padding: "18px 16px",
-                      cursor: "default",
+                      border: "1px solid rgba(255, 255, 255, 0.06)",
+                      background: "rgba(10, 10, 12, 0.75)",
+                      backdropFilter: "blur(20px) saturate(180%)",
+                      padding: "24px",
                     }}
                   >
-                    <div
-                      style={{
-                        width: 38, height: 38, borderRadius: 10,
-                        background: feat.bg,
-                        border: `1px solid ${feat.color}25`,
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        marginBottom: 12,
-                        transition: "transform 0.2s, box-shadow 0.2s",
-                        boxShadow: "none",
-                      }}
-                      className="group-hover:scale-110"
-                    >
-                      <Icon size={16} style={{ color: feat.color }} />
+                    <div>
+                      {/* Icon Indicator */}
+                      <div
+                        className="w-9 h-9 rounded-lg flex items-center justify-center border transition-all duration-300 group-hover:scale-105"
+                        style={{
+                          background: feat.bg,
+                          borderColor: `${feat.color}25`
+                        }}
+                      >
+                        <Icon size={16} strokeWidth={1.5} style={{ color: feat.color }} />
+                      </div>
+                      <h3 className="font-display font-medium text-[0.85rem] tracking-tight text-white mt-4">{feat.name}</h3>
+                      <p className="text-zinc-500 text-[0.72rem] leading-relaxed mt-1">{feat.desc}</p>
                     </div>
-                    <h3 style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: "0.8rem", color: "var(--text-primary)", marginBottom: 5 }}>{feat.name}</h3>
-                    <p style={{ fontSize: "0.7rem", color: "var(--text-dim)", lineHeight: 1.55 }}>{feat.desc}</p>
+
+                    {/* Integrated Interactive Blueprint Mockup */}
+                    {feat.mockup}
                   </div>
                 </motion.div>
               );
@@ -247,79 +435,93 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── HOW IT WORKS ─────────────────────────────────────────── */}
-      <section className="relative z-10 w-full py-28 px-6">
-        <div className="w-full max-w-5xl mx-auto">
-          {/* Heading */}
-          <motion.div initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }}
-            className="text-center mb-14">
-            <p style={{ fontFamily: "var(--font-mono)", fontSize: "0.65rem", letterSpacing: "0.2em", color: "var(--cyan)", marginBottom: 12 }}>ARCHITECTURE</p>
-            <h2 style={{ fontFamily: "var(--font-display)", fontSize: "clamp(1.6rem, 3vw, 2.5rem)", fontWeight: 700, letterSpacing: "-0.02em", color: "var(--text-primary)" }}>
-              Decoupled Pipeline Integration
+      {/* ── DECOUPLED ARCHITECTURE (How It Works) ───────────────── */}
+      <section className="relative z-10 w-full py-24 px-6 border-b border-white/[0.06] bg-black">
+        <div className="w-full max-w-4xl mx-auto">
+          {/* Header */}
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            className="text-center mb-16"
+          >
+            <p className="font-mono text-[0.58rem] tracking-[0.2em] text-[#86868b] font-bold uppercase mb-3">INFRASTRUCTURE PIPELINE</p>
+            <h2 className="font-display font-medium text-[1.8rem] md:text-[2.2rem] tracking-tight text-white animate-pulse-glow">
+              Zero Latency Hybrid Architecture.
             </h2>
-            <p className="mt-3" style={{ color: "var(--text-secondary)", fontSize: "0.9rem" }}>
-              A secure 2-part pipeline: local client wrapper connecting instantly to free Kaggle GPU nodes.
+            <p className="mt-3 text-[#86868b] text-[0.85rem] max-w-md mx-auto leading-relaxed">
+              Experience lightning rendering rates via a decoupled remote GPU execution chain.
             </p>
           </motion.div>
 
-          {/* Steps */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          {/* Interactive Step Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative">
             {STEPS.map((step, i) => (
               <motion.div
                 key={step.n}
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 15 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: i * 0.1 }}
-                style={{ borderRadius: 16, border: "1px solid var(--border-subtle)", background: "var(--bg-surface)", padding: "28px 24px", position: "relative", overflow: "hidden" }}
+                transition={{ duration: 0.6, delay: i * 0.1, ease: [0.16, 1, 0.3, 1] }}
+                className="relative rounded-2xl bg-zinc-950 border border-white/[0.05] p-6 overflow-hidden flex flex-col justify-between aspect-[1.1/1]"
               >
-                {/* Watermark */}
-                <div style={{ position: "absolute", top: -8, right: 10, fontFamily: "var(--font-display)", fontWeight: 900, fontSize: "5rem", color: "rgba(255,255,255,0.025)", lineHeight: 1, userSelect: "none", pointerEvents: "none" }}>{step.n}</div>
-                {/* Badge */}
-                <div className="inline-flex items-center mb-5" style={{ padding: "4px 10px", borderRadius: 6, background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)" }}>
-                  <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.58rem", letterSpacing: "0.12em", color: "var(--amber)" }}>STEP {step.n}</span>
+                {/* Step badge overlay */}
+                <div className="absolute top-4 right-4 text-zinc-800 font-display font-bold text-4xl block opacity-40 select-none">
+                  {step.n}
                 </div>
-                <div className="text-3xl mb-3">{step.icon}</div>
-                <h3 style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "0.9rem", color: "var(--text-primary)", marginBottom: 10 }}>{step.title}</h3>
-                <p style={{ fontSize: "0.78rem", color: "var(--text-secondary)", lineHeight: 1.65 }}>{step.desc}</p>
+                <div className="w-8 h-8 rounded-lg bg-zinc-900 border border-white/[0.06] flex items-center justify-center text-amber-500 mb-6">
+                  {step.icon}
+                </div>
+                <div>
+                  <h3 className="font-display font-medium text-[0.82rem] tracking-tight text-[#f5f5f7]">{step.title}</h3>
+                  <p className="text-[0.72rem] text-[#86868b] leading-relaxed mt-2">{step.desc}</p>
+                </div>
               </motion.div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── BOTTOM CTA ───────────────────────────────────────────── */}
-      <section className="relative z-10 w-full py-24 px-6 text-center" style={{ borderTop: "1px solid var(--border-subtle)", background: "linear-gradient(180deg, rgba(12,12,22,0) 0%, rgba(8,8,16,0.8) 100%)" }}>
-        <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse 600px 300px at 50% 80%, rgba(245,158,11,0.06), transparent)", pointerEvents: "none" }} />
-        <div className="relative w-full max-w-2xl mx-auto text-center">
-          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }}>
-            <div className="flex justify-center mb-8 opacity-25">
-              <FilmHoles count={10} />
-            </div>
-            <h2 className="w-full" style={{ fontFamily: "var(--font-display)", fontSize: "clamp(1.8rem, 4vw, 3rem)", fontWeight: 800, letterSpacing: "-0.025em", color: "var(--text-primary)", marginBottom: 16, textAlign: "center" }}>
-              Ready to Upgrade Your{" "}
-              <span style={{ color: "var(--amber)" }}>Editing Engine?</span>
+      {/* ── BOTTOM CTA SECTION ───────────────────────────────────── */}
+      <section className="relative z-10 w-full py-28 px-6 text-center bg-zinc-950/60 overflow-hidden">
+        {/* Spotlight decoration */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_600px_350px_at_50%_100%,rgba(217,119,6,0.05),transparent)] pointer-events-none" />
+
+        <div className="relative w-full max-w-2xl mx-auto flex flex-col items-center">
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <h2 className="font-display font-medium text-[1.8rem] md:text-[2.6rem] tracking-tight text-white mb-6">
+              Upgrade Your Photographic Engine.
             </h2>
-            <p className="w-full max-w-lg mx-auto mb-8" style={{ color: "var(--text-secondary)", fontSize: "0.9rem", lineHeight: 1.72 }}>
-              Step into a professional creative canvas with built-in segment mapping, multi-stage render buffers, and zero cost.
+            <p className="text-[#86868b] text-[0.85rem] leading-relaxed max-w-lg mx-auto mb-10 font-light">
+              Connect to high-performance remote GPU runtimes, activate advanced segment canvas layers, and render content in high fidelity.
             </p>
             <div className="flex justify-center">
-              <Link href="/editor" className="btn-studio" style={{ fontSize: "0.875rem", padding: "13px 30px" }}>
-                Open Creative Suite <ArrowRight size={16} />
+              <Link href="/editor" className="btn-studio">
+                Open Creative Suite <ArrowRight size={15} />
               </Link>
             </div>
           </motion.div>
         </div>
       </section>
 
-      {/* ── FOOTER ───────────────────────────────────────────────── */}
-      <footer className="relative z-10 w-full py-8 text-center" style={{ borderTop: "1px solid var(--border-subtle)" }}>
-        <div className="flex justify-center mb-4 opacity-10">
-          <FilmHoles count={16} />
+      {/* ── FOOTER BAR ───────────────────────────────────────────── */}
+      <footer className="relative z-10 w-full py-8 border-t border-white/[0.04] bg-black">
+        <div className="max-w-5xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
+          <p className="font-mono text-[0.58rem] tracking-[0.16em] text-[#86868b] uppercase">
+            SNAPSTUDIO AI · NEXT.JS HYBRID STACK WORKSPACE · 2026
+          </p>
+          <div className="flex gap-4">
+            <Link href="https://github.com/chaitanyabhujbal912006-afk/Snapstudio_AI" target="_blank" className="font-mono text-[0.58rem] tracking-tight text-zinc-500 hover:text-white transition-colors duration-150">
+              GITHUB CODEBASE
+            </Link>
+          </div>
         </div>
-        <p style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", letterSpacing: "0.12em", color: "var(--text-dim)" }}>
-          SNAPSTUDIO AI · BUILT WITH NEXT.JS & GRADIO API · 2026 CREATIVE SANDBOX
-        </p>
       </footer>
 
     </div>

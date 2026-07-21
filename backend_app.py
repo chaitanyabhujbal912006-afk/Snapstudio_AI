@@ -589,6 +589,40 @@ with gr.Blocks(title="SnapStudio AI — GPU Backend") as demo:
 
 if __name__ == "__main__":
     demo.queue(max_size=20)  # enable job queue so concurrent requests don't fail
+
+    # ── Background Registry Sync Thread ──
+    import threading
+    import time
+    import requests
+
+    def sync_url_thread():
+        time.sleep(6)  # Wait for the tunnel link to register and print
+        url = getattr(demo, "share_url", None)
+        if url:
+            print(f"📡 Syncing registered GPU link {url} to Next.js API...")
+            try:
+                prod_domain = os.environ.get("SNAPSTUDIO_PROD_URL")
+                secret_key = os.environ.get("SECRET_REGISTRY_KEY")
+                if prod_domain and secret_key:
+                    res = requests.post(
+                        f"{prod_domain}/api/backend",
+                        json={"url": url, "secret": secret_key},
+                        headers={"Content-Type": "application/json"},
+                        timeout=12
+                    )
+                    if res.status_code == 200:
+                        print("✅ Next.js server registry synced successfully!")
+                    else:
+                        print(f"❌ Failed to sync Next.js registry: {res.status_code} - {res.text}")
+                else:
+                    print("⚠️ SNAPSTUDIO_PROD_URL or SECRET_REGISTRY_KEY env vars not set. Skipping registry sync.")
+            except Exception as e:
+                print(f"⚠️ Error occurred during registry sync: {e}")
+        else:
+            print("⚠️ Gradio did not generate a share_url. If running locally, skip sync.")
+
+    threading.Thread(target=sync_url_thread, daemon=True).start()
+
     demo.launch(
         server_name="0.0.0.0",   # bind to all interfaces — required on Kaggle
         server_port=7860,

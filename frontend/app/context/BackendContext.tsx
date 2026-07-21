@@ -149,6 +149,24 @@ export function BackendProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  React.useEffect(() => {
+    const autoConnect = async () => {
+      try {
+        const res = await fetch("/api/backend");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.url) {
+            console.log("[BackendContext] Auto-connecting to synced USP/Kaggle link:", data.url);
+            await connect(data.url);
+          }
+        }
+      } catch (err) {
+        console.error("[BackendContext] Failed to retrieve registered URL:", err);
+      }
+    };
+    autoConnect();
+  }, [connect]);
+
   return (
     <BackendContext.Provider
       value={{ backendUrl, setBackendUrl, isConnected, isConnecting, connect, presets, connectionError }}

@@ -1,42 +1,43 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;0,14..32,900;1,14..32,400&family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
 @import "tailwindcss";
 
 /* ─── Design Tokens ─────────────────────────────────────────────────────────── */
 :root {
-  /* Core backgrounds */
-  --bg-void:      #080810;
-  --bg-base:      #0c0c16;
-  --bg-surface:   #111120;
-  --bg-raised:    #16162a;
-  --bg-floating:  #1c1c32;
+  /* Core backgrounds (Obsidian/True Dark) */
+  --bg-void:      #000000;
+  --bg-base:      #060608;
+  --bg-surface:   #0d0d10;
+  --bg-raised:    #131316;
+  --bg-floating:  #18181c;
 
-  /* Accent — Warm Amber Studio */
-  --amber:        #f59e0b;
-  --amber-bright: #fbbf24;
-  --amber-dim:    #92400e;
-  --amber-glow:   rgba(245, 158, 11, 0.18);
-  --amber-muted:  rgba(245, 158, 11, 0.08);
+  /* Accent — Warm Amber/Gold Studio */
+  --amber:        #d97706; /* Solid Amber */
+  --amber-bright: #fbbf24; /* Radiant Yellow-Gold */
+  --amber-dim:    #78350f; /* Deep Bronze */
+  --amber-glow:   rgba(217, 119, 6, 0.16);
+  --amber-muted:  rgba(217, 119, 6, 0.06);
 
   /* Secondary accent — Electric Cyan */
-  --cyan:         #06b6d4;
-  --cyan-dim:     rgba(6, 182, 212, 0.15);
+  --cyan:         #0891b2;
+  --cyan-dim:     rgba(8, 145, 178, 0.12);
 
   /* Borders */
-  --border-subtle:  rgba(255,255,255,0.045);
-  --border-medium:  rgba(255,255,255,0.09);
-  --border-accent:  rgba(245,158,11,0.25);
+  --border-subtle:  rgba(255,255,255,0.06);
+  --border-medium:  rgba(255,255,255,0.12);
+  --border-accent:  rgba(217,119,6,0.22);
 
-  /* Text */
-  --text-primary:   #f2f0ea;
-  --text-secondary: #9e9b8e;
-  --text-dim:       #5c5a52;
-  --text-accent:    #f59e0b;
+  /* Text (Apple Neutral Palette) */
+  --text-primary:   #f5f5f7;
+  --text-secondary: #86868b;
+  --text-dim:       #515154;
+  --text-accent:    #fbbf24;
 
   /* Fonts */
-  --font-display: 'Space Grotesk', 'Inter', system-ui, sans-serif;
-  --font-body:    'Inter', system-ui, sans-serif;
-  --font-mono:    'Space Mono', 'Fira Code', monospace;
+  --font-display: 'Geist', var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --font-body:    'Geist', var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --font-mono:    'Geist Mono', var(--font-mono-var), 'Fira Code', monospace;
 }
+
 
 /* ─── Reset & Base ───────────────────────────────────────────────────────────── */
 /* NOTE: Do NOT reset margin/padding on * — it breaks mx-auto centering.
