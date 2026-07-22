@@ -152,7 +152,7 @@ export function BackendProvider({ children }: { children: ReactNode }) {
   React.useEffect(() => {
     const autoConnect = async () => {
       try {
-        const res = await fetch("/api/backend");
+        const res = await fetch("/api/backend", { cache: "no-store" });
         if (res.ok) {
           const data = await res.json();
           if (data.url) {
