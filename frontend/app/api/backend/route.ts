@@ -6,7 +6,7 @@ export const revalidate = 0;
 
 // Fetch settings from environment
 const supabaseUrl = process.env.SUPABASE_URL || "";
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ROLE_KEY || "";
 const registrySecret = process.env.SECRET_REGISTRY_KEY || "";
 
 const isDbConfigured = supabaseUrl && supabaseServiceKey;
