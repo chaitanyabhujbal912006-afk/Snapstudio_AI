@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Wifi, WifiOff, Loader2, Zap } from "lucide-react";
+import { Wifi, WifiOff, Loader2, Zap, Link2, X } from "lucide-react";
 import { useBackend } from "@/app/context/BackendContext";
 
 // ── All backend logic is UNCHANGED — only visual markup is updated ──
@@ -11,6 +11,7 @@ export default function Header() {
   const { isConnected, isConnecting, connect, connectionError } = useBackend();
   const [inputUrl, setInputUrl] = useState("");
   const [localError, setLocalError] = useState("");
+  const [showManualInput, setShowManualInput] = useState(false);
 
   const handleConnect = async () => {
     if (!inputUrl.trim()) {
@@ -76,7 +77,9 @@ export default function Header() {
                 width: 34, height: 34,
                 borderRadius: 9,
                 background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
-                display: "flex", alignItems: "center", justifyContent: "center",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
                 boxShadow: "0 4px 14px rgba(245,158,11,0.28)",
               }}
             >
@@ -128,7 +131,7 @@ export default function Header() {
                     exit={{ opacity: 0 }}
                     style={{
                       display: "flex", alignItems: "center", gap: 6,
-                      padding: "4px 10px",
+                      padding: "5px 12px",
                       borderRadius: 100,
                       background: "rgba(245,158,11,0.1)",
                       border: "1px solid rgba(245,158,11,0.25)",
@@ -147,7 +150,7 @@ export default function Header() {
                     exit={{ opacity: 0 }}
                     style={{
                       display: "flex", alignItems: "center", gap: 6,
-                      padding: "4px 10px",
+                      padding: "5px 12px",
                       borderRadius: 100,
                       background: "rgba(52,211,153,0.08)",
                       border: "1px solid rgba(52,211,153,0.25)",
@@ -173,79 +176,127 @@ export default function Header() {
                     exit={{ opacity: 0 }}
                     style={{
                       display: "flex", alignItems: "center", gap: 6,
-                      padding: "4px 10px",
+                      padding: "5px 12px",
                       borderRadius: 100,
-                      background: "rgba(255,255,255,0.03)",
-                      border: "1px solid var(--border-subtle)",
+                      background: "rgba(239,68,68,0.08)",
+                      border: "1px solid rgba(239,68,68,0.25)",
                     }}
                   >
-                    <WifiOff size={10} style={{ color: "var(--text-dim)" }} />
-                    <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", letterSpacing: "0.1em", color: "var(--text-dim)" }}>
-                      NO GPU
+                    <div
+                      style={{
+                        width: 6, height: 6, borderRadius: "50%",
+                        background: "#ef4444",
+                        boxShadow: "0 0 6px rgba(239,68,68,0.6)",
+                      }}
+                    />
+                    <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", letterSpacing: "0.1em", color: "#ef4444" }}>
+                      GPU OFFLINE
                     </span>
                   </motion.div>
                 )}
               </AnimatePresence>
 
-              {/* URL input + connect button — identical logic */}
-              <div
-                style={{
-                  display: "flex", alignItems: "center", gap: 4,
-                  background: "rgba(255,255,255,0.03)",
-                  border: "1px solid var(--border-subtle)",
-                  borderRadius: 10,
-                  padding: "4px 4px 4px 12px",
-                  backdropFilter: "blur(8px)",
-                  transition: "border-color 0.2s",
-                }}
-                className="focus-within:border-amber-500/40"
-              >
-                <Wifi size={12} style={{ color: "var(--text-dim)", flexShrink: 0 }} />
-                <input
-                  type="text"
-                  value={inputUrl}
-                  onChange={(e) => setInputUrl(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleConnect()}
-                  placeholder="https://xxxxxxxx.gradio.live"
-                  style={{
-                    background: "transparent",
-                    border: "none",
-                    outline: "none",
-                    fontFamily: "var(--font-mono)",
-                    fontSize: "0.72rem",
-                    color: "var(--text-primary)",
-                    width: 220,
-                    letterSpacing: "0.02em",
-                  }}
-                  className="placeholder:text-zinc-700"
-                />
+              {/* URL input + connect button — visible only when expanded */}
+              <AnimatePresence>
+                {showManualInput && (
+                  <motion.div
+                    initial={{ opacity: 0, width: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, width: "auto", scale: 1 }}
+                    exit={{ opacity: 0, width: 0, scale: 0.95 }}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 4,
+                      background: "rgba(255,255,255,0.03)",
+                      border: "1px solid var(--border-subtle)",
+                      borderRadius: 10,
+                      padding: "4px 4px 4px 12px",
+                      backdropFilter: "blur(8px)",
+                      overflow: "hidden",
+                    }}
+                  >
+                    <Wifi size={12} style={{ color: "var(--text-dim)", flexShrink: 0 }} />
+                    <input
+                      type="text"
+                      value={inputUrl}
+                      onChange={(e) => setInputUrl(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleConnect()}
+                      placeholder="https://xxxxxxxx.gradio.live"
+                      style={{
+                        background: "transparent",
+                        border: "none",
+                        outline: "none",
+                        fontFamily: "var(--font-mono)",
+                        fontSize: "0.72rem",
+                        color: "var(--text-primary)",
+                        width: 200,
+                        letterSpacing: "0.02em",
+                      }}
+                      className="placeholder:text-zinc-700"
+                    />
+                    <button
+                      onClick={handleConnect}
+                      disabled={isConnecting}
+                      style={{
+                        padding: "6px 12px",
+                        borderRadius: 7,
+                        background: isConnected
+                          ? "rgba(52,211,153,0.15)"
+                          : "linear-gradient(135deg, #f59e0b, #d97706)",
+                        color: isConnected ? "#34d399" : "#1a0e00",
+                        border: isConnected ? "1px solid rgba(52,211,153,0.3)" : "none",
+                        fontFamily: "var(--font-display)",
+                        fontWeight: 700,
+                        fontSize: "0.7rem",
+                        letterSpacing: "0.04em",
+                        cursor: isConnecting ? "not-allowed" : "pointer",
+                        opacity: isConnecting ? 0.5 : 1,
+                        transition: "all 0.2s",
+                        display: "flex", alignItems: "center", gap: 5,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {isConnecting ? <Loader2 size={11} className="animate-spin" /> : null}
+                      {isConnecting ? "Linking…" : isConnected ? "Reconnect" : "Link CPU"}
+                    </button>
+                    <button
+                      onClick={() => setShowManualInput(false)}
+                      style={{
+                        padding: 6,
+                        marginInlineEnd: 2,
+                        borderRadius: 6,
+                        background: "transparent",
+                        border: "none",
+                        cursor: "pointer",
+                        color: "var(--text-dim)",
+                        display: "flex", alignItems: "center",
+                        transition: "color 0.2s",
+                      }}
+                      className="hover:text-zinc-300"
+                    >
+                      <X size={14} />
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {!showManualInput && (
                 <button
-                  onClick={handleConnect}
-                  disabled={isConnecting}
+                  onClick={() => setShowManualInput(true)}
                   style={{
-                    padding: "6px 12px",
-                    borderRadius: 7,
-                    background: isConnected
-                      ? "rgba(52,211,153,0.15)"
-                      : "linear-gradient(135deg, #f59e0b, #d97706)",
-                    color: isConnected ? "#34d399" : "#1a0e00",
-                    border: isConnected ? "1px solid rgba(52,211,153,0.3)" : "none",
-                    fontFamily: "var(--font-display)",
-                    fontWeight: 700,
-                    fontSize: "0.7rem",
-                    letterSpacing: "0.04em",
-                    cursor: isConnecting ? "not-allowed" : "pointer",
-                    opacity: isConnecting ? 0.5 : 1,
+                    padding: 8,
+                    borderRadius: 9,
+                    background: "rgba(255,255,255,0.03)",
+                    border: "1px solid var(--border-subtle)",
+                    cursor: "pointer",
+                    color: "var(--text-secondary)",
+                    display: "flex", alignItems: "center",
                     transition: "all 0.2s",
-                    display: "flex", alignItems: "center", gap: 5,
-                    whiteSpace: "nowrap",
-                    boxShadow: isConnected ? "none" : "0 2px 8px rgba(245,158,11,0.2)",
                   }}
+                  title="Configure manual GPU link override"
+                  className="hover:text-amber-500 hover:border-amber-500/25"
                 >
-                  {isConnecting ? <Loader2 size={11} className="animate-spin" /> : null}
-                  {isConnecting ? "Linking…" : isConnected ? "Reconnect" : "Connect GPU"}
+                  <Link2 size={12} />
                 </button>
-              </div>
+              )}
             </div>
 
             {displayError && (
