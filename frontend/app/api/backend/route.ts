@@ -21,9 +21,19 @@ const getSupabaseClient = () => {
 export async function GET() {
   try {
     const supabase = getSupabaseClient();
+    
+    const diagnostics = {
+      SUPABASE_URL_configured: !!supabaseUrl,
+      SUPABASE_SERVICE_ROLE_KEY_configured: !!supabaseServiceKey,
+      SECRET_REGISTRY_KEY_configured: !!registrySecret
+    };
+
     if (!supabase) {
       console.warn("[Registry GET] Supabase is not configured yet. Returning placeholder.");
-      return NextResponse.json({ url: "" });
+      return NextResponse.json({ 
+        url: "", 
+        diagnostics 
+      });
     }
 
     const { data, error } = await supabase
@@ -34,14 +44,27 @@ export async function GET() {
 
     if (error) {
       console.error("[Registry GET] Database query failed:", error.message);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ 
+        error: error.message, 
+        diagnostics 
+      }, { status: 500 });
     }
 
-    return NextResponse.json({ url: data?.url || "" });
+    return NextResponse.json({ 
+      url: data?.url || "", 
+      diagnostics 
+    });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[Registry GET] Exception occurred:", msg);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return NextResponse.json({ 
+      error: msg, 
+      diagnostics: {
+        SUPABASE_URL_configured: !!supabaseUrl,
+        SUPABASE_SERVICE_ROLE_KEY_configured: !!supabaseServiceKey,
+        SECRET_REGISTRY_KEY_configured: !!registrySecret
+      } 
+    }, { status: 500 });
   }
 }
 
