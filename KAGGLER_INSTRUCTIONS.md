@@ -45,10 +45,15 @@ if REPO_DIR not in sys.path:
 print('Working dir:', os.getcwd())
 ```
 
-#### 🚀 Step 2: Bootstrap Dependencies and Launch Backend
-This cell will clean conflicting preloader packages (such as conflicting ONNX runtime elements and broken MediaPipe versions), verify GPU acceleration (preferring GPU T4 x2 for optimum rendering speed), load the warm VRAM models cache, and launch the Gradio instance.
+#### 🚀 Step 2: Set Environment Variables & Launch Backend
+This cell sets up connection parameters (so Gradio reports its active URL to Vercel/Supabase automatically) and boots the backend.
 ```python
 import os, sys
+
+# ── Env configurations (syncs link automatically to Next.js) ──
+os.environ["SNAPSTUDIO_PROD_URL"] = "https://snapstudio-ai-one.vercel.app" 
+os.environ["SECRET_REGISTRY_KEY"] = "snapstudio_pass_123"
+
 REPO_DIR = '/kaggle/working/snapstudio'
 os.chdir(REPO_DIR)
 if REPO_DIR not in sys.path:
