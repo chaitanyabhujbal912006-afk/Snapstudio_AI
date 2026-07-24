@@ -45,12 +45,21 @@ def _load_pipeline():
     return _pipe
 
 
-def remove_object(image: Image.Image, mask: Image.Image,
-                   steps: int = 20, guidance_scale: float = 7.5, seed: int = 42) -> Image.Image:
+def remove_object(
+    image: Image.Image,
+    mask: Image.Image,
+    prompt: str = "",
+    negative_prompt: str = "",
+    steps: int = 20,
+    guidance_scale: float = 7.5,
+    seed: int = 42
+) -> Image.Image:
     """
     Args:
         image: PIL Image (RGB), the original photo.
         mask: PIL Image (L), white = area to remove/fill in, black = keep as-is.
+        prompt: custom prompt for object replacement, or empty string for seamless erase.
+        negative_prompt: custom negative prompt.
         steps: denoising steps (no LCM shortcut available for this mode).
         seed: for reproducibility.
 
@@ -66,14 +75,19 @@ def remove_object(image: Image.Image, mask: Image.Image,
     image_resized = image.convert("RGB").resize((512, 512))
     mask_resized = mask.convert("L").resize((512, 512))
 
-    # A generic prompt that just asks for plausible, seamless content --
-    # since we're removing something, not adding something specific.
-    prompt = "seamless background, natural continuation of surroundings, photorealistic, high quality"
-    negative_prompt = "artifact, blurry, distorted, extra objects, text, watermark, low quality"
+    if not prompt or not prompt.strip():
+        final_prompt = "seamless background, natural continuation of surroundings, photorealistic, high quality"
+    else:
+        final_prompt = f"{prompt.strip()}, highly detailed, photorealistic, high quality"
+
+    if not negative_prompt or not negative_prompt.strip():
+        final_neg_prompt = "artifact, blurry, distorted, extra objects, text, watermark, low quality"
+    else:
+        final_neg_prompt = negative_prompt.strip()
 
     result = pipe(
-        prompt=prompt,
-        negative_prompt=negative_prompt,
+        prompt=final_prompt,
+        negative_prompt=final_neg_prompt,
         image=image_resized,
         mask_image=mask_resized,
         num_inference_steps=steps,
@@ -82,3 +96,4 @@ def remove_object(image: Image.Image, mask: Image.Image,
     )
 
     return result.images[0].resize(original_size)
+

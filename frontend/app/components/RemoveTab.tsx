@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
-import { Eraser, Loader2, RotateCcw, Upload } from "lucide-react";
+import { Eraser, Loader2, RotateCcw, Upload, Sparkles, Wand2 } from "lucide-react";
 import ResultPanel from "@/app/components/ResultPanel";
 import { useBackend } from "@/app/context/BackendContext";
 import { apiRemoveObject } from "@/app/lib/api";
@@ -19,6 +19,11 @@ export default function RemoveTab() {
   const [brushSize, setBrushSize] = useState(25);
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasMask, setHasMask] = useState(false);
+
+  // New Mode: "erase" vs "replace"
+  const [mode, setMode] = useState<"erase" | "replace">("erase");
+  const [prompt, setPrompt] = useState("");
+  const [negativePrompt, setNegativePrompt] = useState("");
 
   const drawImageToCanvas = useCallback((img: HTMLImageElement) => {
     const canvas = canvasRef.current;
@@ -77,7 +82,7 @@ export default function RemoveTab() {
     const ctx = overlay.getContext("2d")!;
     const { x, y } = getPos(e);
     ctx.globalCompositeOperation = "source-over";
-    ctx.fillStyle = "rgba(139, 92, 246, 0.6)";
+    ctx.fillStyle = mode === "erase" ? "rgba(239, 68, 68, 0.6)" : "rgba(168, 85, 247, 0.6)";
     ctx.beginPath();
     ctx.arc(x, y, brushSize, 0, Math.PI * 2);
     ctx.fill();
@@ -121,7 +126,9 @@ export default function RemoveTab() {
     const maskB64 = getMaskB64();
     setIsProcessing(true);
     setError("");
-    const res = await apiRemoveObject(backendUrl, imageB64, maskB64);
+
+    const targetPrompt = mode === "replace" ? prompt : "";
+    const res = await apiRemoveObject(backendUrl, imageB64, maskB64, targetPrompt, negativePrompt);
     setIsProcessing(false);
     if (res.success) setResult(res.data);
     else setError(res.error);
@@ -130,7 +137,7 @@ export default function RemoveTab() {
   const handleDownload = (url: string) => {
     const a = document.createElement("a");
     a.href = url;
-    a.download = "snapstudio-removed.png";
+    a.download = `snapstudio-${mode}.png`;
     a.click();
   };
 
@@ -143,21 +150,61 @@ export default function RemoveTab() {
     >
       <div className="flex items-start gap-3">
         <div className="w-10 h-10 rounded-xl bg-violet-600/20 border border-violet-500/20 flex items-center justify-center shrink-0">
-          <Eraser size={18} className="text-violet-400" />
+          <Wand2 size={18} className="text-violet-400" />
         </div>
         <div>
-          <h2 className="text-white font-semibold text-lg">Remove Object</h2>
+          <h2 className="text-white font-semibold text-lg">AI Magic Eraser & Replacer</h2>
           <p className="text-zinc-500 text-sm mt-0.5">
-            Paint over anything you want erased — the AI fills it with realistic surroundings. Slower (~2–4 min) due to a dedicated inpainting model.
+            Brush over any region to erase unwanted objects seamlessly or replace them with custom AI generations via text prompts.
           </p>
         </div>
       </div>
+
+      {/* Mode Selector Tabs */}
+      <div className="flex bg-zinc-900/80 p-1 rounded-xl border border-white/[0.06] gap-1">
+        <button
+          onClick={() => setMode("erase")}
+          className={`flex-1 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+            mode === "erase"
+              ? "bg-red-500/20 border border-red-500/40 text-red-400 font-bold shadow-md"
+              : "text-zinc-400 hover:text-white"
+          }`}
+        >
+          <Eraser size={14} /> Magic Erase Mode
+        </button>
+        <button
+          onClick={() => setMode("replace")}
+          className={`flex-1 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+            mode === "replace"
+              ? "bg-purple-500/20 border border-purple-500/40 text-purple-300 font-bold shadow-md"
+              : "text-zinc-400 hover:text-white"
+          }`}
+        >
+          <Sparkles size={14} /> Prompted Replace Mode
+        </button>
+      </div>
+
+      {/* Prompt input if Replace mode */}
+      {mode === "replace" && (
+        <div className="p-3 bg-purple-950/20 border border-purple-500/20 rounded-xl space-y-2">
+          <label className="text-xs font-medium text-purple-300 flex items-center gap-1.5">
+            <Sparkles size={13} className="text-purple-400" /> Object Replacement Prompt
+          </label>
+          <input
+            type="text"
+            placeholder="e.g. A shiny golden trophy, leather jacket, bouquet of red roses"
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            className="w-full px-3 py-2 rounded-lg bg-zinc-900/90 border border-white/[0.08] text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-purple-500"
+          />
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-4">
         {/* Canvas zone */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Paint to remove</p>
+            <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Paint over target area</p>
             <div className="flex items-center gap-2">
               <span className="text-xs text-zinc-600">Brush: {brushSize}px</span>
               <input
@@ -197,7 +244,7 @@ export default function RemoveTab() {
                 </div>
                 <div className="text-center">
                   <p className="text-white/80 font-medium text-sm">Upload photo to paint</p>
-                  <p className="text-zinc-600 text-xs mt-1">Then brush over what to remove</p>
+                  <p className="text-zinc-600 text-xs mt-1">Then brush over what to erase or replace</p>
                 </div>
               </label>
             )}
@@ -217,7 +264,7 @@ export default function RemoveTab() {
           <ResultPanel
             result={result}
             isProcessing={isProcessing}
-            placeholder={{ icon: "🧹", text: "Object-removed result will appear here" }}
+            placeholder={{ icon: "🧹", text: "Inpainted result will appear here" }}
             onDownload={handleDownload}
           />
         </div>
@@ -226,7 +273,7 @@ export default function RemoveTab() {
       {hasMask && !isProcessing && (
         <p className="text-xs text-violet-400 flex items-center gap-1.5">
           <span className="w-1.5 h-1.5 rounded-full bg-violet-500 inline-block animate-pulse" />
-          Mask painted — ready to remove
+          Mask painted — ready to process
         </p>
       )}
 
@@ -241,7 +288,13 @@ export default function RemoveTab() {
           bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500
           disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-purple-900/30 text-white cursor-pointer"
       >
-        {isProcessing ? <><Loader2 size={16} className="animate-spin" />Removing…</> : <><Eraser size={16} />Remove Object</>}
+        {isProcessing ? (
+          <><Loader2 size={16} className="animate-spin" /> Processing Inpainting…</>
+        ) : mode === "erase" ? (
+          <><Eraser size={16} /> Erase Object</>
+        ) : (
+          <><Sparkles size={16} /> Replace Object</>
+        )}
       </button>
     </motion.div>
   );

@@ -7,11 +7,13 @@ import Header from "@/app/components/Header";
 import Sidebar, { type FeatureId } from "@/app/components/Sidebar";
 
 // Panels — quick edit
+import CanvasEditor from "@/app/components/CanvasEditor";
 import EnhanceTab from "@/app/components/EnhanceTab";
 import ColorGradePanel from "@/app/components/panels/ColorGradePanel";
 import StyleTab from "@/app/components/StyleTab";
 import DenoisePanel from "@/app/components/panels/DenoisePanel";
 import EffectsPanel from "@/app/components/panels/EffectsPanel";
+import RelightPanel from "@/app/components/panels/RelightPanel";
 
 // Panels — AI enhance
 import UpscalePanel from "@/app/components/panels/UpscalePanel";
@@ -209,9 +211,11 @@ function RetouchPanel() {
 // ── Panel router ──────────────────────────────────────────────────────────────
 function ActivePanel({ id }: { id: FeatureId }) {
   const panels: Record<FeatureId, React.ReactNode> = {
+    canvas_studio: <CanvasEditor />,
     enhance:      <EnhanceTab />,
     color_grade:  <ColorGradePanel />,
     retouch:      <RetouchPanel />,
+    relight:      <RelightPanel />,
     denoise:      <DenoisePanel />,
     effects:      <EffectsPanel />,
     upscale:      <UpscalePanel />,

@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { motion } from "framer-motion";
-import { ImageIcon, Loader2, Users, Package } from "lucide-react";
+import { ImageIcon, Loader2, Users, Package, Sparkles } from "lucide-react";
 import UploadZone from "@/app/components/UploadZone";
 import ResultPanel from "@/app/components/ResultPanel";
 import { useBackend } from "@/app/context/BackendContext";
@@ -29,6 +29,8 @@ export default function BgSwapTab() {
   const [error, setError] = useState("");
   const [subjectType, setSubjectType] = useState("Portrait / selfie");
   const [styleName, setStyleName] = useState("Portrait - clean studio");
+  const [customPrompt, setCustomPrompt] = useState("");
+  const [useCustom, setUseCustom] = useState(false);
   const [numVariants, setNumVariants] = useState(1);
 
   const styleOptions = subjectType === "Portrait / selfie" ? PORTRAIT_STYLES : PRODUCT_STYLES;
@@ -49,7 +51,8 @@ export default function BgSwapTab() {
     if (!imageB64 || !isConnected) return;
     setIsProcessing(true);
     setError("");
-    const res = await apiBgSwap(backendUrl, imageB64, subjectType, styleName, numVariants);
+    const targetCustomPrompt = useCustom ? customPrompt : "";
+    const res = await apiBgSwap(backendUrl, imageB64, subjectType, styleName, numVariants, targetCustomPrompt);
     setIsProcessing(false);
     if (res.success) setResults(res.data);
     else setError(res.error);
@@ -74,9 +77,9 @@ export default function BgSwapTab() {
           <ImageIcon size={18} className="text-violet-400" />
         </div>
         <div>
-          <h2 className="text-white font-semibold text-lg">Background Swap</h2>
+          <h2 className="text-white font-semibold text-lg">AI Background Swap</h2>
           <p className="text-zinc-500 text-sm mt-0.5">
-            AI segments your subject and generates a brand-new background. Works for portraits and products (~1–2 min per variant).
+            AI segments your subject and generates a brand-new background from presets or your own custom prompt (~1–2 min).
           </p>
         </div>
       </div>
@@ -96,6 +99,42 @@ export default function BgSwapTab() {
           />
         </div>
       </div>
+
+      {/* Preset vs Custom Mode Toggle */}
+      <div className="flex bg-zinc-900/80 p-1 rounded-xl border border-white/[0.06] gap-1">
+        <button
+          onClick={() => setUseCustom(false)}
+          className={`flex-1 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+            !useCustom ? "bg-amber-500/20 border border-amber-500/40 text-amber-400 font-bold" : "text-zinc-400 hover:text-white"
+          }`}
+        >
+          <ImageIcon size={13} /> Preset Environment Templates
+        </button>
+        <button
+          onClick={() => setUseCustom(true)}
+          className={`flex-1 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+            useCustom ? "bg-purple-500/20 border border-purple-500/40 text-purple-300 font-bold" : "text-zinc-400 hover:text-white"
+          }`}
+        >
+          <Sparkles size={13} /> Custom Vision Prompt
+        </button>
+      </div>
+
+      {/* Custom Prompt Input */}
+      {useCustom ? (
+        <div className="p-3 bg-purple-950/20 border border-purple-500/20 rounded-xl space-y-2">
+          <label className="text-xs font-medium text-purple-300 flex items-center gap-1.5">
+            <Sparkles size={13} className="text-purple-400" /> Custom Background Description
+          </label>
+          <input
+            type="text"
+            placeholder="e.g. A futuristic neon glass penthouse overlooking rainy Tokyo skyline at sunset, bokeh depth of field"
+            value={customPrompt}
+            onChange={(e) => setCustomPrompt(e.target.value)}
+            className="w-full px-3 py-2 rounded-lg bg-zinc-900/90 border border-white/[0.08] text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-purple-500"
+          />
+        </div>
+      ) : null}
 
       {/* Controls */}
       <div className="grid grid-cols-3 gap-4">
@@ -124,16 +163,18 @@ export default function BgSwapTab() {
         </div>
 
         {/* Style */}
-        <div className="space-y-2">
-          <label className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Background Style</label>
-          <select
-            value={styleName}
-            onChange={(e) => setStyleName(e.target.value)}
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm outline-none focus:border-violet-500/50 transition-colors"
-          >
-            {styleOptions.map((s) => <option key={s} value={s} className="bg-zinc-900">{s}</option>)}
-          </select>
-        </div>
+        {!useCustom && (
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Background Style</label>
+            <select
+              value={styleName}
+              onChange={(e) => setStyleName(e.target.value)}
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm outline-none focus:border-violet-500/50 transition-colors"
+            >
+              {styleOptions.map((s) => <option key={s} value={s} className="bg-zinc-900">{s}</option>)}
+            </select>
+          </div>
+        )}
 
         {/* Variants */}
         <div className="space-y-2">
@@ -162,7 +203,7 @@ export default function BgSwapTab() {
           bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500
           disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-purple-900/30 text-white cursor-pointer"
       >
-        {isProcessing ? <><Loader2 size={16} className="animate-spin" />Generating…</> : <><ImageIcon size={16} />Generate Background</>}
+        {isProcessing ? <><Loader2 size={16} className="animate-spin" />Generating Background…</> : <><ImageIcon size={16} />Generate Background</>}
       </button>
     </motion.div>
   );

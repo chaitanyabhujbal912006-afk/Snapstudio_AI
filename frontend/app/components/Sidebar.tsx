@@ -4,12 +4,12 @@ import { motion } from "framer-motion";
 import {
   Sparkles, ImageIcon, Palette, Eraser, Zap,
   SlidersHorizontal, UserCheck, Wind, ArrowUpFromLine,
-  Scan, Wand2, Type, Maximize2
+  Scan, Wand2, Type, Maximize2, Sun, Crop
 } from "lucide-react";
 
 export type FeatureId =
-  | "enhance" | "color_grade" | "retouch" | "denoise" | "effects"
-  | "upscale" | "face_enhance" | "bg_blur"
+  | "canvas_studio" | "enhance" | "color_grade" | "retouch" | "denoise" | "effects"
+  | "upscale" | "face_enhance" | "bg_blur" | "relight"
   | "bg_swap" | "style_filter" | "remove_object" | "outpaint"
   | "text2img";
 
@@ -30,6 +30,14 @@ interface Category {
 
 const CATEGORIES: Category[] = [
   {
+    label: "Live Studio",
+    badge: "0ms · Client",
+    badgeColor: "#10b981",
+    features: [
+      { id: "canvas_studio", label: "Live Canvas Studio", icon: Crop, speed: "0ms", color: "#10b981" },
+    ],
+  },
+  {
     label: "Quick Edit",
     badge: "CPU · Instant",
     badgeColor: "#06b6d4",
@@ -37,10 +45,12 @@ const CATEGORIES: Category[] = [
       { id: "enhance",     label: "Auto-Enhance",     icon: Sparkles,          speed: "~2s",   color: "#06b6d4" },
       { id: "color_grade", label: "Color Grade",       icon: SlidersHorizontal, speed: "~0.2s", color: "#f59e0b" },
       { id: "retouch",     label: "Portrait Retouch",  icon: UserCheck,         speed: "~0.5s", color: "#34d399" },
+      { id: "relight",     label: "Studio Relight",    icon: Sun,               speed: "~0.3s", color: "#f59e0b" },
       { id: "denoise",     label: "Denoise",           icon: Wind,              speed: "~1s",   color: "#94a3b8" },
       { id: "effects",     label: "Effects",           icon: Wand2,             speed: "<0.5s", color: "#a78bfa" },
     ],
   },
+
   {
     label: "AI Enhance",
     badge: "GPU · 5–30s",

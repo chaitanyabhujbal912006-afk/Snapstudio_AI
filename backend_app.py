@@ -17,6 +17,7 @@ os.environ["OMP_NUM_THREADS"] = "4"
 os.environ["MKL_NUM_THREADS"] = "4"
 if torch.cuda.is_available():
     torch.backends.cuda.matmul.allow_tf32 = True
+    torch.backends.cudnn.benchmark = True
 
 import gradio as gr
 from PIL import Image
@@ -26,6 +27,8 @@ from pipeline.enhance import auto_enhance
 from pipeline.color_grade import apply_color_grade
 from pipeline.retouch import retouch_portrait
 from pipeline.denoise import denoise
+from pipeline.relight import relight_image, COLOR_PRESETS
+
 from pipeline.effects import (
     apply_hdr, apply_vignette, apply_film_grain,
     apply_chromatic_aberration, apply_bloom,
@@ -297,6 +300,30 @@ def api_bg_blur(
         return {"success": False, "error": str(e)}
 
 
+def api_relight(
+    image_b64: str,
+    preset: str,
+    light_angle: float,
+    intensity: float,
+    rim_light: float,
+    ambient_darkening: float,
+) -> dict:
+    """Virtual Studio Relighting. ~0.2–0.5s."""
+    try:
+        img = _b64_to_pil(image_b64).convert("RGB")
+        result = relight_image(
+            img,
+            preset=preset,
+            light_angle=light_angle,
+            intensity=intensity,
+            rim_light=rim_light,
+            ambient_darkening=ambient_darkening,
+        )
+        return {"success": True, "image": _pil_to_b64(result)}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # AI TRANSFORM — GPU models, 1–5 min
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -306,6 +333,7 @@ def api_bg_swap(
     subject_type: str,
     style_name: str,
     num_variants: int,
+    custom_prompt: str = "",
 ) -> dict:
     """Replace background with AI-generated scene. ~1–2 min per variant."""
     try:
@@ -315,17 +343,20 @@ def api_bg_swap(
         # ── Step 1: Segment subject (done once, shared across all variants) ──────
         session_type = "person" if subject_type == "Portrait / selfie" else "general"
         cutout, mask = segment_product(img, subject_type=session_type)
-        # Wider feather for natural, non-razor edges
         soft_mask = feather_mask(mask, blur_radius=8)
 
-        # ── Step 2: Depth map — use the FULL image (not masked) ─────────────────
-        # Masking before depth extraction destroys scene structure context that
-        # ControlNet needs to generate a plausible background perspective.
+        # ── Step 2: Depth map ──────────────────────────────────────────────────
         depth_map = get_depth_map(img)
 
-        style = STYLES.get(style_name)
-        if not style:
-            return {"success": False, "error": f"Unknown style: {style_name}"}
+        if custom_prompt and custom_prompt.strip():
+            prompt = custom_prompt.strip()
+            neg_prompt = "blurry, low quality, distorted, bad perspective, unrealistic"
+        else:
+            style = STYLES.get(style_name)
+            if not style:
+                return {"success": False, "error": f"Unknown style: {style_name}"}
+            prompt = style["prompt"]
+            neg_prompt = style["negative_prompt"]
 
         # ── Step 3: Generate variants ────────────────────────────────────────────
         results = []
@@ -333,8 +364,8 @@ def api_bg_swap(
         for i in range(n):
             bg = generate_background(
                 depth_map=depth_map,
-                prompt=style["prompt"],
-                negative_prompt=style["negative_prompt"],
+                prompt=prompt,
+                negative_prompt=neg_prompt,
                 seed=42 + i,
             )
             tone_matched = harmonize_tone(cutout, mask, bg)
@@ -345,7 +376,6 @@ def api_bg_swap(
         return {"success": True, "images": results}
     except Exception as e:
         return {"success": False, "error": str(e)}
-
 
 
 def api_style_filter(
@@ -367,16 +397,22 @@ def api_style_filter(
         return {"success": False, "error": str(e)}
 
 
-def api_remove_object(image_b64: str, mask_b64: str) -> dict:
-    """AI object removal via inpainting. ~2–4 min."""
+def api_remove_object(
+    image_b64: str,
+    mask_b64: str,
+    prompt: str = "",
+    negative_prompt: str = "",
+) -> dict:
+    """AI object removal or object replacement via inpainting. ~2–4 min."""
     try:
         free_gpu_models(keep="inpaint")
         img = _b64_to_pil(image_b64).convert("RGB")
         mask = _b64_to_pil(mask_b64).convert("L")
-        result = remove_object(img, mask)
+        result = remove_object(img, mask, prompt=prompt, negative_prompt=negative_prompt)
         return {"success": True, "image": _pil_to_b64(result)}
     except Exception as e:
         return {"success": False, "error": str(e)}
+
 
 
 def api_outpaint(
@@ -519,6 +555,16 @@ with gr.Blocks(title="SnapStudio AI — GPU Backend") as demo:
         ef_out = gr.JSON(label="result")
         gr.Button("Run").click(api_effect, inputs=[ef_img, ef_type, ef_params], outputs=[ef_out], api_name="api_effect")
 
+    with gr.Tab("Studio Relight"):
+        rl_img = gr.Textbox(label="image_b64")
+        rl_preset = gr.Textbox(label="preset", value="warm_gold")
+        rl_angle = gr.Number(label="light_angle", value=45.0)
+        rl_intensity = gr.Number(label="intensity", value=0.5)
+        rl_rim = gr.Number(label="rim_light", value=0.4)
+        rl_dark = gr.Number(label="ambient_darkening", value=0.2)
+        rl_out = gr.JSON(label="result")
+        gr.Button("Run").click(api_relight, inputs=[rl_img, rl_preset, rl_angle, rl_intensity, rl_rim, rl_dark], outputs=[rl_out], api_name="api_relight")
+
     # ── AI Enhance ────────────────────────────────────────────────────────────
     with gr.Tab("Upscale 4x"):
         up_img = gr.Textbox(label="image_b64")
@@ -547,8 +593,9 @@ with gr.Blocks(title="SnapStudio AI — GPU Backend") as demo:
         bs_subj = gr.Textbox(label="subject_type", value="Portrait / selfie")
         bs_style = gr.Textbox(label="style_name", value="Portrait - clean studio")
         bs_var = gr.Number(label="num_variants", value=1)
+        bs_prompt = gr.Textbox(label="custom_prompt", value="")
         bs_out = gr.JSON(label="result")
-        gr.Button("Run").click(api_bg_swap, inputs=[bs_img, bs_subj, bs_style, bs_var], outputs=[bs_out], api_name="api_bg_swap")
+        gr.Button("Run").click(api_bg_swap, inputs=[bs_img, bs_subj, bs_style, bs_var, bs_prompt], outputs=[bs_out], api_name="api_bg_swap")
 
     with gr.Tab("Style Filter"):
         sf_img = gr.Textbox(label="image_b64")
@@ -560,8 +607,11 @@ with gr.Blocks(title="SnapStudio AI — GPU Backend") as demo:
     with gr.Tab("Remove Object"):
         rm_img = gr.Textbox(label="image_b64")
         rm_mask = gr.Textbox(label="mask_b64")
+        rm_prompt = gr.Textbox(label="prompt", value="")
+        rm_neg = gr.Textbox(label="negative_prompt", value="")
         rm_out = gr.JSON(label="result")
-        gr.Button("Run").click(api_remove_object, inputs=[rm_img, rm_mask], outputs=[rm_out], api_name="api_remove_object")
+        gr.Button("Run").click(api_remove_object, inputs=[rm_img, rm_mask, rm_prompt, rm_neg], outputs=[rm_out], api_name="api_remove_object")
+
 
     with gr.Tab("Outpaint"):
         op_img = gr.Textbox(label="image_b64")
