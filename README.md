@@ -10,14 +10,21 @@ Upload a photo and get studio-quality results instantly: auto-enhance, swap back
 
 | Mode | What it does | Speed |
 |---|---|---|
-| ✨ Auto-Enhance | Fixes lighting, color, contrast, exposure & sharpness | ~1–2 sec |
-| 🖼️ Background Swap | Replaces background with AI-generated scene | ~1–2 min |
-| 🎨 Style Filter | Transforms photo into anime, painting, sketch, etc. | ~30–60 sec |
-| 🧹 Object Removal | Paint over anything to erase it | ~2–4 min |
-| 🖌️ Text-to-Image | Generate images from a text prompt (SDXL-Turbo) | ~10–20 sec |
-| 🔍 Upscale | 2× or 4× AI super-resolution (Swin2SR) | ~15–60 sec |
-| 🎭 Portrait Retouch | Skin smoothing, clarity, vibrance, shadow lift | ~0.2 sec |
-| 🌟 Creative Effects | HDR, vignette, film grain, bloom, tilt-shift, etc. | ~0.5 sec |
+| 🎛️ Canvas Studio | Real-time brightness, contrast, crop, rotate, vignette (0ms) | Instant |
+| ✨ Auto-Enhance | Fixes lighting, color, contrast, exposure & sharpness | ~0.5s |
+| 🎨 Color Grade | LUT curves, split-tone, professional color presets | ~0.5s |
+| 🎭 Portrait Retouch | Skin smoothing, clarity, vibrance, shadow lift | ~0.2s |
+| 🌪️ Denoise | NLM / bilateral noise reduction | ~1s |
+| 🌟 Creative Effects | HDR, vignette, film grain, bloom, tilt-shift, etc. | ~0.5s |
+| 💡 Studio Relight | AI relighting with 8 presets & 360° light direction | ~1s |
+| 🖼️ Background Swap | Replaces background with AI-generated scene or custom prompt | ~1–2 min |
+| 🎨 Style Filter | Anime, Ghibli, Pixar 3D, Cyberpunk 2077, Oil Painting + more | ~30–60s |
+| 🧹 Object Eraser | Paint over anything to erase or replace with AI | ~2–4 min |
+| 🔍 Upscale | 2× or 4× AI super-resolution (Swin2SR) | ~15–60s |
+| 👤 Face Enhance | Face detection + super-resolution + retouching | ~10–30s |
+| 📸 Bokeh Blur | Depth-guided background blur (MiDaS) | ~5–15s |
+| 🖌️ Outpaint | Extend the canvas in any direction with AI | ~2–4 min |
+| 🖼️ Text-to-Image | Generate images from a text prompt (SDXL-Turbo) | ~10–20s |
 
 ---
 
@@ -160,8 +167,16 @@ Snapstudio_AI/
 │
 ├── presets/
 │   ├── styles.py              # Background style prompt templates
-│   └── style_filters.py       # Art style prompt templates
+│   └── style_filters.py       # Art style prompt templates (Anime, Ghibli, Pixar, Cyberpunk…)
 │
+├── docs/                      # 📚 AI-agent-optimized developer docs
+│   ├── ARCHITECTURE.md        # System design & data flow
+│   ├── BACKEND_GUIDE.md       # How to add/modify backend features
+│   ├── FRONTEND_GUIDE.md      # How to add/modify frontend panels
+│   ├── API_REFERENCE.md       # All API endpoint signatures
+│   └── TROUBLESHOOTING.md     # Debugging guide
+│
+├── AGENTS.md                  # Quick-reference index for AI agents
 ├── kaggle_notebook.ipynb      # 🏃 Run this on Kaggle for the GPU backend
 ├── kaggle_startup.py          # Backend startup & Gradio interface definition
 ├── app.py                     # (Legacy) Gradio-only app for HF Spaces
@@ -182,12 +197,28 @@ Snapstudio_AI/
 
 | Layer | Technology |
 |---|---|
-| Frontend | Next.js 14 (App Router), TypeScript, CSS Modules |
-| Hosting | Vercel (free tier) |
-| Backend | Python 3.10, Gradio, FastAPI |
-| GPU Compute | Kaggle (free T4 GPU) |
-| AI Models | Stable Diffusion 1.5, SDXL-Turbo, ControlNet Depth, LCM-LoRA, SD Inpainting, Swin2SR |
+| Frontend | Next.js 14 (App Router), TypeScript, Vanilla CSS, Framer Motion |
+| Hosting | Vercel (free tier), maxDuration=300s |
+| Backend | Python 3.10, Gradio (SSE), FastAPI |
+| GPU Compute | Kaggle (free T4 × 2 GPU, ~30h/week) |
+| AI Models | Stable Diffusion 1.5, SDXL-Turbo, ControlNet Depth, LCM-LoRA, SD Inpainting, Swin2SR, MiDaS |
 | Image Processing | OpenCV, PIL/Pillow, NumPy, rembg |
+| Client Optim | HTML5 Canvas pre-scaling (max 1920px), 60 FPS Canvas Studio |
+
+---
+
+## 📚 Developer Documentation
+
+AI-agent-optimized docs — designed to give full context without reading source files:
+
+| Doc | Purpose |
+|---|---|
+| [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) | System design, data flow, GPU allocation |
+| [`docs/BACKEND_GUIDE.md`](./docs/BACKEND_GUIDE.md) | How to add/modify backend features |
+| [`docs/FRONTEND_GUIDE.md`](./docs/FRONTEND_GUIDE.md) | How to add/modify frontend panels |
+| [`docs/API_REFERENCE.md`](./docs/API_REFERENCE.md) | Every API endpoint with TypeScript signatures |
+| [`docs/TROUBLESHOOTING.md`](./docs/TROUBLESHOOTING.md) | Debugging guide for common errors |
+| [`AGENTS.md`](./AGENTS.md) | Quick-reference index for AI agents |
 
 ---
 
