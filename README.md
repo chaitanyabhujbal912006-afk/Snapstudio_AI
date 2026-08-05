@@ -48,7 +48,23 @@ Upload a photo and get studio-quality results instantly: auto-enhance, swap back
 
 ## 🚀 Quick Start
 
-### 1. Start the Backend (Kaggle GPU)
+### ⚡ Option A: Local CPU Engine (100% Kaggle-Free, One-Click Start)
+
+Double-click `start_local_snapstudio.bat` in the root folder!
+
+Or run manually:
+```bash
+# 1. Start Python Local Backend (Port 7860)
+python backend_app.py
+
+# 2. In another terminal, start Next.js Frontend (Port 3000)
+cd frontend && npm run dev
+```
+Open `http://localhost:3000` and enter `http://127.0.0.1:7860` in the header bar!
+
+---
+
+### ☁️ Option B: Start the Cloud Backend (Kaggle GPU)
 
 > 📄 See the full guide: [KAGGLER_INSTRUCTIONS.md](./KAGGLER_INSTRUCTIONS.md)
 
