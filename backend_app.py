@@ -22,31 +22,22 @@ if torch.cuda.is_available():
 import gradio as gr
 from PIL import Image
 
-# ── Pipeline imports ───────────────────────────────────────────────────────────
+# ── Fast CPU/DIP pipeline imports (no GPU, instant load) ──────────────────────
 from pipeline.enhance import auto_enhance
 from pipeline.color_grade import apply_color_grade
 from pipeline.retouch import retouch_portrait
 from pipeline.denoise import denoise
 from pipeline.relight import relight_image, COLOR_PRESETS
-
 from pipeline.effects import (
     apply_hdr, apply_vignette, apply_film_grain,
     apply_chromatic_aberration, apply_bloom,
     apply_cross_process, apply_color_splash, apply_orton_glow,
 )
-from pipeline.bg_blur import blur_background
-from pipeline.upscale import upscale_image
-from pipeline.face_enhance import enhance_faces
-from pipeline.segment import segment_product, feather_mask
-from pipeline.depth_edges import get_depth_map
-from pipeline.generate_bg import generate_background
 from pipeline.composite import composite
 from pipeline.harmonize import add_shadow, harmonize_tone
-from pipeline.style_filter import apply_style
-from pipeline.inpaint import remove_object
-from pipeline.text2img import generate_from_text, STYLE_PRESETS
-from pipeline.outpaint import outpaint, DIRECTIONS
+from pipeline.segment import segment_product, feather_mask
 
+# ── DIP CPU fallbacks ──────────────────────────────────────────────────────────
 from pipeline.dip_fallbacks import (
     dip_inpaint, dip_upscale, dip_bg_blur, dip_segment,
     dip_style_transfer, dip_face_enhance, dip_outpaint
@@ -56,67 +47,66 @@ from presets.styles import STYLES
 from presets.style_filters import STYLE_FILTERS
 from presets.color_grades import COLOR_GRADES
 
-import pipeline.inpaint as inpaint_mod
-import pipeline.style_filter as style_filter_mod
-import pipeline.generate_bg as bg_mod
-import pipeline.upscale as upscale_mod
-import pipeline.text2img as t2i_mod
+_DIP_ONLY = not torch.cuda.is_available() or os.environ.get("DIP_ONLY", "0") == "1"
+
+def _lazy_gpu_import(name: str):
+    """Import a GPU-heavy pipeline module only when actually needed."""
+    import importlib
+    return importlib.import_module(f"pipeline.{name}")
 
 
 # ── Model memory management ────────────────────────────────────────────────────
 
-GPU_MODELS = {
-    "inpaint": lambda: inpaint_mod._pipe,
-    "style": lambda: style_filter_mod._pipe,
-    "bg_swap": lambda: bg_mod._pipe,
-    "upscale": lambda: upscale_mod._model,
-    "t2i": lambda: t2i_mod._t2i_pipe,
-}
-
-
 def free_gpu_models(keep: str = None):
-    """Unload GPU models dynamically to prevent OOM based on available GPUs."""
+    """Unload GPU models dynamically to prevent OOM. Safe in DIP-only mode."""
+    import sys
+
+    if _DIP_ONLY:
+        return  # No GPU models loaded — nothing to free
+
     # Ensure PyTorch default GPU device index aligns with the target pipeline's device
     if keep and keep != "clear_all":
         from pipeline.device_helper import set_active_cuda_device
         set_active_cuda_device(keep)
 
-    # If 2 or more GPUs are available (Kaggle GPU T4 x2), we have 2 x 15.6 GB = 31.2 GB of VRAM.
-    # We distribute models across devices using pipeline/device_helper.py and can safely 
-    # keep ALL models warm in VRAM for instant switching latency!
+    # If 2+ GPUs available keep all models warm
     if torch.cuda.is_available() and torch.cuda.device_count() >= 2:
         return
 
     cleared = False
 
-    def clear(mod, attr):
+    def clear_mod(mod_name: str, attr: str):
         nonlocal cleared
+        mod = sys.modules.get(f"pipeline.{mod_name}")
+        if mod is None:
+            return
         obj = getattr(mod, attr, None)
         if obj is not None:
             setattr(mod, attr, None)
             cleared = True
 
-    if keep != "inpaint":    clear(inpaint_mod, "_pipe")
-    if keep != "style":      clear(style_filter_mod, "_pipe")
-    if keep != "bg_swap":    clear(bg_mod, "_pipe")
-    
+    if keep != "inpaint":   clear_mod("inpaint", "_pipe")
+    if keep != "style":     clear_mod("style_filter", "_pipe")
+    if keep != "bg_swap":   clear_mod("generate_bg", "_pipe")
+
     # Swin2SR (upscale) is extremely lightweight (~800MB VRAM). Keep it loaded
     # even when switching to prevent slow model init on face restoration requests,
     # unless explicitly doing a clear all.
     if keep == "clear_all":
-        clear(inpaint_mod, "_pipe")
-        clear(style_filter_mod, "_pipe")
-        clear(bg_mod, "_pipe")
-        clear(upscale_mod, "_model")
-        clear(upscale_mod, "_processor")
-        clear(t2i_mod, "_t2i_pipe")
+        clear_mod("inpaint", "_pipe")
+        clear_mod("style_filter", "_pipe")
+        clear_mod("generate_bg", "_pipe")
+        clear_mod("upscale", "_model")
+        clear_mod("upscale", "_processor")
+        clear_mod("text2img", "_t2i_pipe")
     elif keep != "t2i":
-        clear(t2i_mod, "_t2i_pipe")
+        clear_mod("text2img", "_t2i_pipe")
 
     if cleared:
         gc.collect()
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
+
 
 
 # ── Image helpers ──────────────────────────────────────────────────────────────
@@ -265,8 +255,9 @@ def api_effect(image_b64: str, effect: str, params: dict) -> dict:
 def api_upscale(image_b64: str, scale: int) -> dict:
     """4x or 2x AI super-resolution using Swin2SR or DIP Lanczos+CAS."""
     try:
-        if not torch.cuda.is_available() or os.environ.get("DIP_ONLY", "0") == "1":
+        if _DIP_ONLY:
             raise RuntimeError("DIP CPU Fallback mode")
+        from pipeline.upscale import upscale_image
         free_gpu_models(keep="upscale")
         img = _b64_to_pil(image_b64).convert("RGB")
         result = upscale_image(img, scale=scale)
@@ -287,8 +278,9 @@ def api_face_enhance(
 ) -> dict:
     """AI face detection + restoration + retouching."""
     try:
-        if not torch.cuda.is_available() or os.environ.get("DIP_ONLY", "0") == "1":
+        if _DIP_ONLY:
             raise RuntimeError("DIP CPU Fallback mode")
+        from pipeline.face_enhance import enhance_faces
         free_gpu_models(keep="upscale")
         img = _b64_to_pil(image_b64).convert("RGB")
         result = enhance_faces(img, upscale_strength=upscale_strength,
@@ -311,6 +303,7 @@ def api_bg_blur(
 ) -> dict:
     """DSLR background blur (bokeh)."""
     try:
+        from pipeline.bg_blur import blur_background
         img = _b64_to_pil(image_b64).convert("RGB")
         result = blur_background(img, blur_amount=blur_amount,
                                  use_depth=use_depth, subject_type=subject_type)
@@ -361,8 +354,10 @@ def api_bg_swap(
 ) -> dict:
     """Replace background with AI-generated scene or studio DIP fallback."""
     try:
-        if not torch.cuda.is_available() or os.environ.get("DIP_ONLY", "0") == "1":
+        if _DIP_ONLY:
             raise RuntimeError("DIP CPU Fallback mode")
+        from pipeline.depth_edges import get_depth_map
+        from pipeline.generate_bg import generate_background
         free_gpu_models(keep="bg_swap")
         img = _b64_to_pil(image_b64).convert("RGB")
 
@@ -415,8 +410,9 @@ def api_style_filter(
 ) -> dict:
     """Style transfer (anime, oil painting, etc)."""
     try:
-        if not torch.cuda.is_available() or os.environ.get("DIP_ONLY", "0") == "1":
+        if _DIP_ONLY:
             raise RuntimeError("DIP CPU Fallback mode")
+        from pipeline.style_filter import apply_style
         free_gpu_models(keep="style")
         img = _b64_to_pil(image_b64).convert("RGB")
         style = STYLE_FILTERS.get(style_name)
@@ -442,8 +438,9 @@ def api_remove_object(
 ) -> dict:
     """AI object removal or object replacement via inpainting."""
     try:
-        if not torch.cuda.is_available() or os.environ.get("DIP_ONLY", "0") == "1":
+        if _DIP_ONLY:
             raise RuntimeError("DIP CPU Fallback mode")
+        from pipeline.inpaint import remove_object
         free_gpu_models(keep="inpaint")
         img = _b64_to_pil(image_b64).convert("RGB")
         mask = _b64_to_pil(mask_b64).convert("L")
@@ -467,8 +464,9 @@ def api_outpaint(
 ) -> dict:
     """Extend the canvas with AI-generated content or DIP mirror padding."""
     try:
-        if not torch.cuda.is_available() or os.environ.get("DIP_ONLY", "0") == "1":
+        if _DIP_ONLY:
             raise RuntimeError("DIP CPU Fallback mode")
+        from pipeline.outpaint import outpaint
         free_gpu_models(keep="inpaint")
         img = _b64_to_pil(image_b64).convert("RGB")
         result = outpaint(img, direction=direction, amount=amount, prompt=prompt)
@@ -498,6 +496,9 @@ def api_text2img(
 ) -> dict:
     """Text-to-image via SDXL-Turbo. ~8–12s per image on T4."""
     try:
+        if _DIP_ONLY:
+            return {"success": False, "error": "Text-to-image requires GPU. Not available in local CPU/DIP mode."}
+        from pipeline.text2img import generate_from_text
         free_gpu_models(keep="t2i")
         images = generate_from_text(
             prompt=prompt, negative_prompt=negative_prompt, style=style,
@@ -725,11 +726,9 @@ if __name__ == "__main__":
     threading.Thread(target=sync_url_thread, daemon=True).start()
 
     demo.launch(
-        server_name="0.0.0.0",   # bind to all interfaces — required on Kaggle
+        server_name="0.0.0.0",   # bind to all interfaces
         server_port=7860,
-        share=True,              # generates *.gradio.live public URL
+        share=False,             # set True only on Kaggle for public *.gradio.live URL
         show_error=True,
         debug=False,
-        show_api=True,           # expose /docs API reference page
-        allowed_paths=[],
     )
