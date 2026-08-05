@@ -47,6 +47,11 @@ from pipeline.inpaint import remove_object
 from pipeline.text2img import generate_from_text, STYLE_PRESETS
 from pipeline.outpaint import outpaint, DIRECTIONS
 
+from pipeline.dip_fallbacks import (
+    dip_inpaint, dip_upscale, dip_bg_blur, dip_segment,
+    dip_style_transfer, dip_face_enhance, dip_outpaint
+)
+
 from presets.styles import STYLES
 from presets.style_filters import STYLE_FILTERS
 from presets.color_grades import COLOR_GRADES
@@ -258,14 +263,21 @@ def api_effect(image_b64: str, effect: str, params: dict) -> dict:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def api_upscale(image_b64: str, scale: int) -> dict:
-    """4x or 2x AI super-resolution using Swin2SR. ~5–15s on T4."""
+    """4x or 2x AI super-resolution using Swin2SR or DIP Lanczos+CAS."""
     try:
+        if not torch.cuda.is_available() or os.environ.get("DIP_ONLY", "0") == "1":
+            raise RuntimeError("DIP CPU Fallback mode")
         free_gpu_models(keep="upscale")
         img = _b64_to_pil(image_b64).convert("RGB")
         result = upscale_image(img, scale=scale)
         return {"success": True, "image": _pil_to_b64(result)}
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        try:
+            img = _b64_to_pil(image_b64).convert("RGB")
+            result = dip_upscale(img, scale=scale)
+            return {"success": True, "image": _pil_to_b64(result)}
+        except Exception as dip_e:
+            return {"success": False, "error": f"{e} (DIP Fallback error: {dip_e})"}
 
 
 def api_face_enhance(
@@ -273,15 +285,22 @@ def api_face_enhance(
     upscale_strength: float,
     retouch_strength: float,
 ) -> dict:
-    """AI face detection + restoration + retouching. ~10–25s on T4."""
+    """AI face detection + restoration + retouching."""
     try:
+        if not torch.cuda.is_available() or os.environ.get("DIP_ONLY", "0") == "1":
+            raise RuntimeError("DIP CPU Fallback mode")
         free_gpu_models(keep="upscale")
         img = _b64_to_pil(image_b64).convert("RGB")
         result = enhance_faces(img, upscale_strength=upscale_strength,
                                 retouch_strength=retouch_strength)
         return {"success": True, "image": _pil_to_b64(result)}
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        try:
+            img = _b64_to_pil(image_b64).convert("RGB")
+            result = dip_face_enhance(img)
+            return {"success": True, "image": _pil_to_b64(result)}
+        except Exception as dip_e:
+            return {"success": False, "error": f"{e} (DIP Fallback error: {dip_e})"}
 
 
 def api_bg_blur(
@@ -290,14 +309,19 @@ def api_bg_blur(
     use_depth: bool,
     subject_type: str,
 ) -> dict:
-    """DSLR background blur (bokeh). ~3–8s on CPU."""
+    """DSLR background blur (bokeh)."""
     try:
         img = _b64_to_pil(image_b64).convert("RGB")
         result = blur_background(img, blur_amount=blur_amount,
                                  use_depth=use_depth, subject_type=subject_type)
         return {"success": True, "image": _pil_to_b64(result)}
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        try:
+            img = _b64_to_pil(image_b64).convert("RGB")
+            result = dip_bg_blur(img, blur_amount=blur_amount)
+            return {"success": True, "image": _pil_to_b64(result)}
+        except Exception as dip_e:
+            return {"success": False, "error": f"{e} (DIP Fallback error: {dip_e})"}
 
 
 def api_relight(
@@ -335,17 +359,17 @@ def api_bg_swap(
     num_variants: int,
     custom_prompt: str = "",
 ) -> dict:
-    """Replace background with AI-generated scene. ~1–2 min per variant."""
+    """Replace background with AI-generated scene or studio DIP fallback."""
     try:
+        if not torch.cuda.is_available() or os.environ.get("DIP_ONLY", "0") == "1":
+            raise RuntimeError("DIP CPU Fallback mode")
         free_gpu_models(keep="bg_swap")
         img = _b64_to_pil(image_b64).convert("RGB")
 
-        # ── Step 1: Segment subject (done once, shared across all variants) ──────
         session_type = "person" if subject_type == "Portrait / selfie" else "general"
         cutout, mask = segment_product(img, subject_type=session_type)
         soft_mask = feather_mask(mask, blur_radius=8)
 
-        # ── Step 2: Depth map ──────────────────────────────────────────────────
         depth_map = get_depth_map(img)
 
         if custom_prompt and custom_prompt.strip():
@@ -358,7 +382,6 @@ def api_bg_swap(
             prompt = style["prompt"]
             neg_prompt = style["negative_prompt"]
 
-        # ── Step 3: Generate variants ────────────────────────────────────────────
         results = []
         n = max(1, min(int(num_variants), 4))
         for i in range(n):
@@ -375,7 +398,14 @@ def api_bg_swap(
 
         return {"success": True, "images": results}
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        try:
+            img = _b64_to_pil(image_b64).convert("RGB")
+            session_type = "person" if subject_type == "Portrait / selfie" else "general"
+            cutout, mask = segment_product(img, subject_type=session_type)
+            bg_blurred = dip_bg_blur(img, mask, blur_amount=25.0)
+            return {"success": True, "images": [_pil_to_b64(bg_blurred)]}
+        except Exception as dip_e:
+            return {"success": False, "error": f"{e} (DIP Fallback error: {dip_e})"}
 
 
 def api_style_filter(
@@ -383,8 +413,10 @@ def api_style_filter(
     style_name: str,
     strength: float,
 ) -> dict:
-    """Style transfer (anime, oil painting, etc). ~30–60s."""
+    """Style transfer (anime, oil painting, etc)."""
     try:
+        if not torch.cuda.is_available() or os.environ.get("DIP_ONLY", "0") == "1":
+            raise RuntimeError("DIP CPU Fallback mode")
         free_gpu_models(keep="style")
         img = _b64_to_pil(image_b64).convert("RGB")
         style = STYLE_FILTERS.get(style_name)
@@ -394,7 +426,12 @@ def api_style_filter(
                              negative_prompt=style["negative_prompt"], strength=strength)
         return {"success": True, "image": _pil_to_b64(result)}
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        try:
+            img = _b64_to_pil(image_b64).convert("RGB")
+            result = dip_style_transfer(img, style=style_name)
+            return {"success": True, "image": _pil_to_b64(result)}
+        except Exception as dip_e:
+            return {"success": False, "error": f"{e} (DIP Fallback error: {dip_e})"}
 
 
 def api_remove_object(
@@ -403,16 +440,23 @@ def api_remove_object(
     prompt: str = "",
     negative_prompt: str = "",
 ) -> dict:
-    """AI object removal or object replacement via inpainting. ~2–4 min."""
+    """AI object removal or object replacement via inpainting."""
     try:
+        if not torch.cuda.is_available() or os.environ.get("DIP_ONLY", "0") == "1":
+            raise RuntimeError("DIP CPU Fallback mode")
         free_gpu_models(keep="inpaint")
         img = _b64_to_pil(image_b64).convert("RGB")
         mask = _b64_to_pil(mask_b64).convert("L")
         result = remove_object(img, mask, prompt=prompt, negative_prompt=negative_prompt)
         return {"success": True, "image": _pil_to_b64(result)}
     except Exception as e:
-        return {"success": False, "error": str(e)}
-
+        try:
+            img = _b64_to_pil(image_b64).convert("RGB")
+            mask = _b64_to_pil(mask_b64).convert("L")
+            result = dip_inpaint(img, mask)
+            return {"success": True, "image": _pil_to_b64(result)}
+        except Exception as dip_e:
+            return {"success": False, "error": f"{e} (DIP Fallback error: {dip_e})"}
 
 
 def api_outpaint(
@@ -421,14 +465,21 @@ def api_outpaint(
     amount: int,
     prompt: str,
 ) -> dict:
-    """Extend the canvas with AI-generated content. ~1–3 min."""
+    """Extend the canvas with AI-generated content or DIP mirror padding."""
     try:
+        if not torch.cuda.is_available() or os.environ.get("DIP_ONLY", "0") == "1":
+            raise RuntimeError("DIP CPU Fallback mode")
         free_gpu_models(keep="inpaint")
         img = _b64_to_pil(image_b64).convert("RGB")
         result = outpaint(img, direction=direction, amount=amount, prompt=prompt)
         return {"success": True, "image": _pil_to_b64(result)}
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        try:
+            img = _b64_to_pil(image_b64).convert("RGB")
+            result = dip_outpaint(img, direction=direction, amount=amount)
+            return {"success": True, "image": _pil_to_b64(result)}
+        except Exception as dip_e:
+            return {"success": False, "error": f"{e} (DIP Fallback error: {dip_e})"}
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

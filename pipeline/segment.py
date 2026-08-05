@@ -41,13 +41,16 @@ def segment_product(image: Image.Image, subject_type: str = "general"):
         mask: PIL Image (L) -- single-channel mask, white = subject.
     """
     image = image.convert("RGB")
-    session = _get_session(subject_type)
-    cutout = remove(image, session=session)  # returns RGBA PIL Image
-
-    # Extract the alpha channel as our mask
-    mask = cutout.split()[-1]
-
-    return cutout, mask
+    try:
+        session = _get_session(subject_type)
+        cutout = remove(image, session=session)  # returns RGBA PIL Image
+        mask = cutout.split()[-1]
+        return cutout, mask
+    except Exception as e:
+        import sys
+        print(f"⚠️ Warning: rembg segment failed, falling back to DIP segment: {e}", file=sys.stderr)
+        from pipeline.dip_fallbacks import dip_segment
+        return dip_segment(image)
 
 
 def feather_mask(mask: Image.Image, blur_radius: int = 3) -> Image.Image:
