@@ -149,8 +149,8 @@ export default function ResultPanel({
                       onClick={() => onDownload?.(src, i)}
                       style={{
                         position: "absolute", bottom: 6, right: 6,
-                        opacity: 0, transition: "opacity 0.2s",
-                        background: "rgba(8,8,16,0.85)",
+                        transition: "all 0.2s ease-in-out",
+                        background: "rgba(24,24,29,0.9)",
                         backdropFilter: "blur(8px)",
                         border: "1px solid var(--border-medium)",
                         borderRadius: 7,
@@ -161,8 +161,9 @@ export default function ResultPanel({
                         fontSize: "0.65rem",
                         fontFamily: "var(--font-display)",
                         fontWeight: 600,
+                        boxShadow: "0 2px 8px rgba(0,0,0,0.4)",
                       }}
-                      className="group-hover:opacity-100"
+                      className="hover:scale-105 hover:border-amber-500/50 hover:text-amber-400"
                     >
                       <Download size={11} />
                     </button>
@@ -191,11 +192,11 @@ export default function ResultPanel({
                   onClick={() => onDownload?.(result!)}
                   style={{
                     position: "absolute", bottom: 10, right: 10,
-                    opacity: 0, transition: "all 0.2s",
+                    transition: "all 0.2s ease-in-out",
                     display: "flex", alignItems: "center", gap: 6,
-                    background: "rgba(8,8,16,0.88)",
+                    background: "rgba(24,24,29,0.9)",
                     backdropFilter: "blur(12px)",
-                    border: "1px solid rgba(245,158,11,0.3)",
+                    border: "1px solid rgba(245,158,11,0.5)",
                     borderRadius: 9,
                     padding: "7px 14px",
                     fontFamily: "var(--font-display)",
@@ -204,8 +205,9 @@ export default function ResultPanel({
                     color: "var(--amber)",
                     cursor: "pointer",
                     letterSpacing: "0.02em",
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
                   }}
-                  className="group-hover:opacity-100"
+                  className="hover:scale-[1.03] hover:border-amber-400 hover:text-white"
                 >
                   <Download size={13} />
                   Save Image
