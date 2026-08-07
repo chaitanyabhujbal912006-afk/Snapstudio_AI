@@ -163,23 +163,49 @@ def dip_style_transfer(image: Image.Image, style: str = "anime") -> Image.Image:
     s_lower = style.lower()
 
     if any(k in s_lower for k in ["anime", "cartoon", "ghibli", "pixar"]):
-        # 1. Bilateral smoothing for clean animation colors
-        smoothed = cv2.bilateralFilter(img_bgr, d=7, sigmaColor=50, sigmaSpace=50)
+        # 1. Bilateral smoothing for clean painting colors
+        smoothed = cv2.bilateralFilter(img_bgr, d=9, sigmaColor=45, sigmaSpace=45)
         
-        # 2. Boost color vibrancy
+        # 2. Split toning: Cool blue/indigo shadows & warm golden highlights (cinematic anime look)
         hsv = cv2.cvtColor(smoothed, cv2.COLOR_BGR2HSV)
         h, s, v = cv2.split(hsv)
-        s = cv2.multiply(s, 1.35)
+        s = cv2.multiply(s, 1.45) # high color vibrancy
         v = cv2.convertScaleAbs(v, alpha=1.05, beta=5)
         color_boosted = cv2.cvtColor(cv2.merge((h, s, v)), cv2.COLOR_HSV2BGR)
         
-        # 3. Clean outlines
+        b_ch, g_ch, r_ch = cv2.split(color_boosted)
+        # Shift shadows to cool indigo
+        shadow_mask = 255 - cv2.threshold(g_ch, 95, 255, cv2.THRESH_BINARY)[1]
+        b_ch = cv2.add(b_ch, cv2.multiply(shadow_mask, 0.12).astype(np.uint8))
+        # Shift highlights to warm gold
+        highlight_mask = cv2.threshold(g_ch, 175, 255, cv2.THRESH_BINARY)[1]
+        r_ch = cv2.add(r_ch, cv2.multiply(highlight_mask, 0.15).astype(np.uint8))
+        g_ch = cv2.add(g_ch, cv2.multiply(highlight_mask, 0.08).astype(np.uint8))
+        color_graded = cv2.merge((b_ch, g_ch, r_ch))
+        
+        # 3. Soft glow / Bloom (diffuse highlight glow)
+        blur_glow = cv2.GaussianBlur(color_graded, (21, 21), 0)
+        bloom = cv2.addWeighted(color_graded, 0.82, blur_glow, 0.18, 0)
+        
+        # 4. Thin, dark indigo outlines (softer and more integrated than harsh black)
         gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
-        gray_blur = cv2.medianBlur(gray, 3)
-        edges = cv2.adaptiveThreshold(
-            gray_blur, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 9, 6
-        )
-        result_bgr = cv2.bitwise_and(color_boosted, cv2.cvtColor(edges, cv2.COLOR_GRAY2BGR))
+        gray_blur = cv2.GaussianBlur(gray, (3, 3), 0)
+        # Edge magnitude via Sobel
+        sobelx = cv2.Sobel(gray_blur, cv2.CV_64F, 1, 0, ksize=3)
+        sobely = cv2.Sobel(gray_blur, cv2.CV_64F, 0, 1, ksize=3)
+        mag = np.sqrt(sobelx**2 + sobely**2)
+        mag = np.uint8(np.minimum(mag, 255))
+        # Create a thresholded binary mask of outlines
+        _, edge_mask = cv2.threshold(mag, 45, 255, cv2.THRESH_BINARY)
+        # Soften outlines
+        edge_mask = cv2.GaussianBlur(edge_mask, (3, 3), 0)
+        
+        # Blend outlines: replace outline pixels with dark indigo/plum
+        alpha = (edge_mask.astype(float) / 255.0)[:, :, np.newaxis]
+        dark_line = np.zeros_like(bloom)
+        dark_line[:] = [42, 28, 52] # BGR plum lines
+        
+        result_bgr = (bloom.astype(float) * (1.0 - alpha) + dark_line.astype(float) * alpha).astype(np.uint8)
 
     elif "oil" in s_lower:
         # Oil Painting brush-stroke feel
