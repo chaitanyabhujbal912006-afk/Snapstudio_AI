@@ -143,49 +143,96 @@ def dip_segment(image: Image.Image) -> tuple[Image.Image, Image.Image]:
 
 def dip_style_transfer(image: Image.Image, style: str = "anime") -> Image.Image:
     """
-    Artistic Style Transfer via DIP Filters.
-    Styles: "anime", "oil_painting", "sketch", "cyberpunk", "retro_pop".
-    Runs in ~200-400ms on CPU.
+    Artistic Style Transfer via Beautiful DIP Filters.
+    Normalizes style name and maps to gorgeous classical filters:
+    - Anime/Cartoon/Ghibli/Pixar: Cel shading + soft bilateral colors + clean outlines
+    - Oil painting: Dynamic detail enhancement + heavy bilateral strokes
+    - Watercolor: Blended wash + dark border edge bleeding
+    - Cyberpunk: Neon blue/cyan & hot pink color channel shift + contrast boost
+    - Comic Pop-Art: High contrast posterization + thick outlines + simulated halftone dot pattern
+    - Pencil sketch: Standard pencil sketch filter
     """
+    original_size = image.size
+    
+    # Downscale to max 800px for instant execution (<300ms on CPU)
     img_rgb = image.convert("RGB")
+    img_rgb.thumbnail((800, 800), Image.Resampling.LANCZOS)
     img_np = np.array(img_rgb)
     img_bgr = cv2.cvtColor(img_np, cv2.COLOR_RGB2BGR)
 
-    if style in ["anime", "cartoon", "ghibli", "pixar"]:
-        # Cartoon / Anime DIP: Bilateral smoothing + Adaptive Canny edge overlay
-        smoothed = cv2.bilateralFilter(img_bgr, d=9, sigmaColor=75, sigmaSpace=75)
+    s_lower = style.lower()
+
+    if any(k in s_lower for k in ["anime", "cartoon", "ghibli", "pixar"]):
+        # 1. Bilateral smoothing for clean animation colors
+        smoothed = cv2.bilateralFilter(img_bgr, d=7, sigmaColor=50, sigmaSpace=50)
+        
+        # 2. Boost color vibrancy
+        hsv = cv2.cvtColor(smoothed, cv2.COLOR_BGR2HSV)
+        h, s, v = cv2.split(hsv)
+        s = cv2.multiply(s, 1.35)
+        v = cv2.convertScaleAbs(v, alpha=1.05, beta=5)
+        color_boosted = cv2.cvtColor(cv2.merge((h, s, v)), cv2.COLOR_HSV2BGR)
+        
+        # 3. Clean outlines
+        gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
+        gray_blur = cv2.medianBlur(gray, 3)
+        edges = cv2.adaptiveThreshold(
+            gray_blur, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 9, 6
+        )
+        result_bgr = cv2.bitwise_and(color_boosted, cv2.cvtColor(edges, cv2.COLOR_GRAY2BGR))
+
+    elif "oil" in s_lower:
+        # Oil Painting brush-stroke feel
+        detail = cv2.detailEnhance(img_bgr, sigma_s=12, sigma_r=0.2)
+        result_bgr = cv2.bilateralFilter(detail, d=9, sigmaColor=70, sigmaSpace=70)
+
+    elif "watercolor" in s_lower:
+        # Blended wash watercolor with pigment bleeding outlines
+        smoothed = cv2.bilateralFilter(img_bgr, d=13, sigmaColor=100, sigmaSpace=100)
+        gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
+        laplacian = cv2.Laplacian(gray, cv2.CV_8U, ksize=3)
+        lap_color = cv2.cvtColor(laplacian, cv2.COLOR_GRAY2BGR)
+        result_bgr = cv2.subtract(smoothed, cv2.multiply(lap_color, 0.45))
+
+    elif "cyberpunk" in s_lower:
+        # Neon cyan/pink split color mapping
+        b, g, r = cv2.split(img_bgr)
+        r_new = cv2.addWeighted(r, 0.65, b, 0.35, 15)
+        g_new = cv2.addWeighted(g, 0.8, r, 0.2, 0)
+        b_new = cv2.addWeighted(b, 0.65, r, 0.35, 45)
+        cyber = cv2.merge((b_new, g_new, r_new))
+        result_bgr = cv2.convertScaleAbs(cyber, alpha=1.25, beta=8)
+
+    elif any(k in s_lower for k in ["comic", "pop-art", "pop"]):
+        # Halftone Pop-art Comic
+        div = 64
+        posterized = (img_bgr // div) * div + div // 2
         gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
         edges = cv2.adaptiveThreshold(
-            gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 9, 7
+            cv2.medianBlur(gray, 5), 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 11, 3
         )
-        edges_bgr = cv2.cvtColor(edges, cv2.COLOR_GRAY2BGR)
-        result_bgr = cv2.bitwise_and(smoothed, edges_bgr)
+        base = cv2.bitwise_and(posterized, cv2.cvtColor(edges, cv2.COLOR_GRAY2BGR))
+        
+        # Overlay halftone dot pattern grid
+        h_img, w_img, _ = base.shape
+        gy, gx = np.mgrid[0:h_img, 0:w_img]
+        dots = ((gx % 7 == 0) & (gy % 7 == 0)).astype(np.uint8) * 35
+        result_bgr = cv2.subtract(base, cv2.cvtColor(dots, cv2.COLOR_GRAY2BGR))
 
-    elif style in ["oil_painting", "watercolor", "impressionist"]:
-        # Watercolor / Impressionist DIP
-        smoothed = cv2.edgePreservingFilter(img_bgr, flags=1, sigma_s=60, sigma_r=0.4)
-        result_bgr = cv2.stylization(smoothed, sigma_s=60, sigma_r=0.45)
-
-    elif style in ["sketch", "line_art"]:
-        # Pencil sketch DIP
-        _, sketch_bgr = cv2.pencilSketch(img_bgr, sigma_s=60, sigma_r=0.07, shade_factor=0.05)
+    elif any(k in s_lower for k in ["sketch", "line"]):
+        # Classical pencil sketch
+        _, sketch_bgr = cv2.pencilSketch(img_bgr, sigma_s=55, sigma_r=0.08, shade_factor=0.04)
         result_bgr = sketch_bgr
 
-    elif style in ["cyberpunk", "neon", "synthwave"]:
-        # Cyberpunk DIP: Shift colors toward cyan/magenta & boost contrast
-        b, g, r = cv2.split(img_bgr)
-        r_boost = cv2.add(r, 40)
-        b_boost = cv2.add(b, 40)
-        result_bgr = cv2.merge((b_boost, g, r_boost))
-        # Boost contrast
-        result_bgr = cv2.convertScaleAbs(result_bgr, alpha=1.2, beta=10)
-
     else:
-        # Default: Stylized Bilateral Quantization
-        result_bgr = cv2.edgePreservingFilter(img_bgr, flags=1, sigma_s=50, sigma_r=0.4)
+        # Default: Stylized edge-preserving bilateral quantization
+        result_bgr = cv2.edgePreservingFilter(img_bgr, flags=1, sigma_s=45, sigma_r=0.35)
 
     result_rgb = cv2.cvtColor(result_bgr, cv2.COLOR_BGR2RGB)
-    return Image.fromarray(result_rgb)
+    
+    # Resize back to original dimensions
+    final_image = Image.fromarray(result_rgb)
+    return final_image.resize(original_size, Image.Resampling.LANCZOS)
 
 
 def dip_face_enhance(image: Image.Image) -> Image.Image:
