@@ -187,25 +187,26 @@ def dip_style_transfer(image: Image.Image, style: str = "anime") -> Image.Image:
         blur_glow = cv2.GaussianBlur(color_graded, (21, 21), 0)
         bloom = cv2.addWeighted(color_graded, 0.82, blur_glow, 0.18, 0)
         
-        # 4. Thin, dark indigo outlines (softer and more integrated than harsh black)
+        # 4. Thin, clean Canny outlines (keeps details clean without muddying the face)
         gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
-        gray_blur = cv2.GaussianBlur(gray, (3, 3), 0)
-        # Edge magnitude via Sobel
-        sobelx = cv2.Sobel(gray_blur, cv2.CV_64F, 1, 0, ksize=3)
-        sobely = cv2.Sobel(gray_blur, cv2.CV_64F, 0, 1, ksize=3)
-        mag = np.sqrt(sobelx**2 + sobely**2)
-        mag = np.uint8(np.minimum(mag, 255))
-        # Create a thresholded binary mask of outlines
-        _, edge_mask = cv2.threshold(mag, 45, 255, cv2.THRESH_BINARY)
-        # Soften outlines
-        edge_mask = cv2.GaussianBlur(edge_mask, (3, 3), 0)
+        gray_blur = cv2.GaussianBlur(gray, (5, 5), 0)
+        canny_edges = cv2.Canny(gray_blur, 70, 180)
         
-        # Blend outlines: replace outline pixels with dark indigo/plum
+        # Clear edge border artifacts to prevent black lines on outer borders
+        canny_edges[0:6, :] = 0
+        canny_edges[-6:, :] = 0
+        canny_edges[:, 0:6] = 0
+        canny_edges[:, -6:] = 0
+        
+        # Soften outlines slightly for a hand-drawn feel
+        edge_mask = cv2.GaussianBlur(canny_edges, (3, 3), 0)
+        
+        # Line-art multiplication: darken underlying colors instead of overwriting them
         alpha = (edge_mask.astype(float) / 255.0)[:, :, np.newaxis]
-        dark_line = np.zeros_like(bloom)
-        dark_line[:] = [42, 28, 52] # BGR plum lines
         
-        result_bgr = (bloom.astype(float) * (1.0 - alpha) + dark_line.astype(float) * alpha).astype(np.uint8)
+        # Multiplier blend to darken the colors on outline pixels
+        darkened = bloom.astype(float) * (1.0 - alpha * 0.55) # 55% max darkening
+        result_bgr = np.clip(darkened, 0, 255).astype(np.uint8)
 
     elif "oil" in s_lower:
         # Oil Painting brush-stroke feel
