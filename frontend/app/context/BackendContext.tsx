@@ -55,8 +55,11 @@ export function BackendProvider({ children }: { children: ReactNode }) {
 
   const connect = useCallback(async (url: string): Promise<boolean> => {
     // Normalize URL — strip trailing slash
-    const trimmed = url.trim().replace(/\/$/, "");
+    let trimmed = url.trim().replace(/\/$/, "");
     if (!trimmed) return false;
+
+    // Normalize "localhost" to "127.0.0.1" to avoid Node.js IPv6 resolution errors (TypeError: fetch failed)
+    trimmed = trimmed.replace("://localhost", "://127.0.0.1");
 
     setIsConnecting(true);
     setIsConnected(false);
