@@ -19,6 +19,10 @@ def dip_inpaint(image: Image.Image, mask: Image.Image, method: str = "telea") ->
     img_np = np.array(image.convert("RGB"))
     img_bgr = cv2.cvtColor(img_np, cv2.COLOR_RGB2BGR)
 
+    # Ensure mask has the exact same dimensions as the image
+    if mask.size != image.size:
+        mask = mask.resize(image.size, Image.Resampling.NEAREST)
+
     mask_np = np.array(mask.convert("L"))
     # Ensure binary mask threshold
     _, mask_bin = cv2.threshold(mask_np, 127, 255, cv2.THRESH_BINARY)
