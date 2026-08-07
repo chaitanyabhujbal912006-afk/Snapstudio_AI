@@ -162,50 +162,76 @@ def dip_style_transfer(image: Image.Image, style: str = "anime") -> Image.Image:
 
     s_lower = style.lower()
 
-    if any(k in s_lower for k in ["anime", "cartoon", "ghibli", "pixar"]):
+    if "cartoon" in s_lower:
+        # ── Western Cartoon Style: Flat colors + Bold black outlines ──
+        # 1. Strong bilateral smoothing to flatten fine details and gradients
+        smoothed = cv2.bilateralFilter(img_bgr, d=11, sigmaColor=70, sigmaSpace=70)
+        
+        # 2. Color posterization / quantization to get flat cel-shaded regions
+        div = 32
+        quantized = (smoothed // div) * div + div // 2
+        
+        # 3. Boost color vibrancy & saturation
+        hsv = cv2.cvtColor(quantized, cv2.COLOR_BGR2HSV)
+        h, s, v = cv2.split(hsv)
+        s = cv2.multiply(s, 1.45) # bold cartoon colors
+        v = cv2.convertScaleAbs(v, alpha=1.05, beta=0)
+        cartoon_colors = cv2.cvtColor(cv2.merge((h, s, v)), cv2.COLOR_HSV2BGR)
+        
+        # 4. Bold, clean outlines (adaptive thresholding)
+        gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
+        gray_blur = cv2.medianBlur(gray, 3)
+        edges = cv2.adaptiveThreshold(
+            gray_blur, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 9, 6
+        )
+        
+        # Clear edge border artifacts
+        edges[0:6, :] = 255
+        edges[-6:, :] = 255
+        edges[:, 0:6] = 255
+        edges[:, -6:] = 255
+        
+        # Overlay outlines on flat cartoon colors
+        result_bgr = cv2.bitwise_and(cartoon_colors, cv2.cvtColor(edges, cv2.COLOR_GRAY2BGR))
+
+    elif any(k in s_lower for k in ["anime", "ghibli", "pixar"]):
+        # ── Cinematic Anime/Ghibli/Pixar Style ──
         # 1. Bilateral smoothing for clean painting colors
         smoothed = cv2.bilateralFilter(img_bgr, d=9, sigmaColor=45, sigmaSpace=45)
         
-        # 2. Split toning: Cool blue/indigo shadows & warm golden highlights (cinematic anime look)
+        # 2. Split toning: Cool blue/indigo shadows & warm golden highlights
         hsv = cv2.cvtColor(smoothed, cv2.COLOR_BGR2HSV)
         h, s, v = cv2.split(hsv)
-        s = cv2.multiply(s, 1.45) # high color vibrancy
+        s = cv2.multiply(s, 1.45)
         v = cv2.convertScaleAbs(v, alpha=1.05, beta=5)
         color_boosted = cv2.cvtColor(cv2.merge((h, s, v)), cv2.COLOR_HSV2BGR)
         
         b_ch, g_ch, r_ch = cv2.split(color_boosted)
-        # Shift shadows to cool indigo
         shadow_mask = 255 - cv2.threshold(g_ch, 95, 255, cv2.THRESH_BINARY)[1]
         b_ch = cv2.add(b_ch, cv2.multiply(shadow_mask, 0.12).astype(np.uint8))
-        # Shift highlights to warm gold
         highlight_mask = cv2.threshold(g_ch, 175, 255, cv2.THRESH_BINARY)[1]
         r_ch = cv2.add(r_ch, cv2.multiply(highlight_mask, 0.15).astype(np.uint8))
         g_ch = cv2.add(g_ch, cv2.multiply(highlight_mask, 0.08).astype(np.uint8))
         color_graded = cv2.merge((b_ch, g_ch, r_ch))
         
-        # 3. Soft glow / Bloom (diffuse highlight glow)
+        # 3. Soft glow / Bloom
         blur_glow = cv2.GaussianBlur(color_graded, (21, 21), 0)
         bloom = cv2.addWeighted(color_graded, 0.82, blur_glow, 0.18, 0)
         
-        # 4. Thin, clean Canny outlines (keeps details clean without muddying the face)
+        # 4. Thin, clean Canny outlines
         gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
         gray_blur = cv2.GaussianBlur(gray, (5, 5), 0)
         canny_edges = cv2.Canny(gray_blur, 70, 180)
         
-        # Clear edge border artifacts to prevent black lines on outer borders
         canny_edges[0:6, :] = 0
         canny_edges[-6:, :] = 0
         canny_edges[:, 0:6] = 0
         canny_edges[:, -6:] = 0
         
-        # Soften outlines slightly for a hand-drawn feel
         edge_mask = cv2.GaussianBlur(canny_edges, (3, 3), 0)
-        
-        # Line-art multiplication: darken underlying colors instead of overwriting them
         alpha = (edge_mask.astype(float) / 255.0)[:, :, np.newaxis]
         
-        # Multiplier blend to darken the colors on outline pixels
-        darkened = bloom.astype(float) * (1.0 - alpha * 0.55) # 55% max darkening
+        darkened = bloom.astype(float) * (1.0 - alpha * 0.55)
         result_bgr = np.clip(darkened, 0, 255).astype(np.uint8)
 
     elif "oil" in s_lower:
