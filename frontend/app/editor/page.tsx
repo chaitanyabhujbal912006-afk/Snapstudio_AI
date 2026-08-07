@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { BackendProvider } from "@/app/context/BackendContext";
 import Header from "@/app/components/Header";
@@ -36,9 +36,9 @@ import Link from "next/link";
 
 // ── BgBlur Panel ─────────────────────────────────────────────────────────────
 function BgBlurPanel() {
-  const { backendUrl, isConnected } = useBackend();
-  const [preview, setPreview] = useState<string | null>(null);
-  const [imageB64, setImageB64] = useState<string | null>(null);
+  const { backendUrl, isConnected, activeImage, setActiveImage } = useBackend();
+  const [preview, setPreview] = useState<string | null>(activeImage);
+  const [imageB64, setImageB64] = useState<string | null>(activeImage);
   const [result, setResult] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState("");
@@ -46,9 +46,17 @@ function BgBlurPanel() {
   const [useDepth, setUseDepth] = useState(true);
   const [subjectType, setSubjectType] = useState("person");
 
+  // Sync with global active image
+  React.useEffect(() => {
+    if (activeImage) {
+      setPreview(activeImage);
+      setImageB64(activeImage);
+    }
+  }, [activeImage]);
+
   const handleFile = useCallback((file: File, b64: string) => {
-    setPreview(b64); setImageB64(b64); setResult(null); setError("");
-  }, []);
+    setPreview(b64); setImageB64(b64); setActiveImage(b64); setResult(null); setError("");
+  }, [setActiveImage]);
   const handleRun = async () => {
     if (!imageB64 || !isConnected) return;
     setIsProcessing(true); setError("");
@@ -135,14 +143,23 @@ function BgBlurPanel() {
 
 // ── Retouch Panel ─────────────────────────────────────────────────────────────
 function RetouchPanel() {
-  const { backendUrl, isConnected } = useBackend();
-  const [preview, setPreview] = useState<string | null>(null);
-  const [imageB64, setImageB64] = useState<string | null>(null);
+  const { backendUrl, isConnected, activeImage, setActiveImage } = useBackend();
+  const [preview, setPreview] = useState<string | null>(activeImage);
+  const [imageB64, setImageB64] = useState<string | null>(activeImage);
   const [result, setResult] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState("");
   const [p, setP] = useState({ skin_smooth: 0.5, clarity: 0.3, sharpen: 0.4, vibrance: 0.3, shadow_lift: 0.2, teeth_whiten: 0.0 });
-  const handleFile = useCallback((file: File, b64: string) => { setPreview(b64); setImageB64(b64); setResult(null); setError(""); }, []);
+
+  // Sync with global active image
+  React.useEffect(() => {
+    if (activeImage) {
+      setPreview(activeImage);
+      setImageB64(activeImage);
+    }
+  }, [activeImage]);
+
+  const handleFile = useCallback((file: File, b64: string) => { setPreview(b64); setImageB64(b64); setActiveImage(b64); setResult(null); setError(""); }, [setActiveImage]);
   const handleRun = async () => {
     if (!imageB64 || !isConnected) return;
     setIsProcessing(true); setError("");

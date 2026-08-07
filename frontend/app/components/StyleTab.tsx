@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Palette, Loader2 } from "lucide-react";
 import UploadZone from "@/app/components/UploadZone";
@@ -19,21 +19,30 @@ const STYLE_META: Record<string, { emoji: string; desc: string }> = {
 };
 
 export default function StyleTab() {
-  const { backendUrl, isConnected } = useBackend();
-  const [preview, setPreview] = useState<string | null>(null);
-  const [imageB64, setImageB64] = useState<string | null>(null);
+  const { backendUrl, isConnected, activeImage, setActiveImage } = useBackend();
+  const [preview, setPreview] = useState<string | null>(activeImage);
+  const [imageB64, setImageB64] = useState<string | null>(activeImage);
   const [result, setResult] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState("");
   const [styleName, setStyleName] = useState("Anime");
   const [strength, setStrength] = useState(60);
 
+  // Sync with global active image
+  useEffect(() => {
+    if (activeImage) {
+      setPreview(activeImage);
+      setImageB64(activeImage);
+    }
+  }, [activeImage]);
+
   const handleFile = useCallback((file: File, b64: string) => {
     setPreview(b64);
     setImageB64(b64);
+    setActiveImage(b64);
     setResult(null);
     setError("");
-  }, []);
+  }, [setActiveImage]);
 
   const handleRun = async () => {
     if (!imageB64 || !isConnected) return;
