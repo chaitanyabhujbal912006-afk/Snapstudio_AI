@@ -46,6 +46,8 @@ from pipeline.dip_fallbacks import (
 from presets.styles import STYLES
 from presets.style_filters import STYLE_FILTERS
 from presets.color_grades import COLOR_GRADES
+from pipeline.text2img import STYLE_PRESETS
+from pipeline.outpaint import DIRECTIONS
 
 _DIP_ONLY = not torch.cuda.is_available() or os.environ.get("DIP_ONLY", "0") == "1"
 
