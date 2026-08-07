@@ -57,7 +57,7 @@ export default function Header() {
       {/* Main header bar */}
       <div
         style={{
-          background: "rgba(8,8,16,0.85)",
+          background: "rgba(24,24,29,0.85)",
           backdropFilter: "blur(24px) saturate(160%)",
           WebkitBackdropFilter: "blur(24px) saturate(160%)",
         }}
@@ -72,19 +72,27 @@ export default function Header() {
             animate={{ opacity: 1, x: 0 }}
             className="flex items-center gap-3 shrink-0"
           >
-            <div
-              style={{
-                width: 34, height: 34,
-                borderRadius: 9,
-                background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                boxShadow: "0 4px 14px rgba(245,158,11,0.28)",
-              }}
-            >
-              <Zap size={16} fill="#1a0e00" color="#1a0e00" />
-            </div>
+            {/* Aperture + AI spark logo mark */}
+            <svg width="32" height="32" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
+              <rect width="28" height="28" rx="7" fill="#222228"/>
+              <g opacity="0.9">
+                <rect x="13.2" y="4" width="1.6" height="8" rx="0.8" fill="#3a3a48" transform="rotate(0 14 14)"/>
+                <rect x="13.2" y="4" width="1.6" height="8" rx="0.8" fill="#3a3a48" transform="rotate(60 14 14)"/>
+                <rect x="13.2" y="4" width="1.6" height="8" rx="0.8" fill="#3a3a48" transform="rotate(120 14 14)"/>
+                <rect x="13.2" y="4" width="1.6" height="8" rx="0.8" fill="#3a3a48" transform="rotate(180 14 14)"/>
+                <rect x="13.2" y="4" width="1.6" height="8" rx="0.8" fill="#3a3a48" transform="rotate(240 14 14)"/>
+                <rect x="13.2" y="4" width="1.6" height="8" rx="0.8" fill="#3a3a48" transform="rotate(300 14 14)"/>
+              </g>
+              <circle cx="14" cy="14" r="9" stroke="#3a3a48" strokeWidth="1" fill="none" opacity="0.5"/>
+              <circle cx="14" cy="14" r="4.5" fill="url(#amberGradH)" opacity="0.95"/>
+              <path d="M14.8 10.5 L12.5 14.2 L14.2 14.2 L13.2 17.5 L15.8 13.5 L14 13.5 Z" fill="#1a0e00" opacity="0.9"/>
+              <defs>
+                <radialGradient id="amberGradH" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stopColor="#fbbf24"/>
+                  <stop offset="100%" stopColor="#d97706"/>
+                </radialGradient>
+              </defs>
+            </svg>
             <div style={{ lineHeight: 1 }}>
               <span
                 style={{

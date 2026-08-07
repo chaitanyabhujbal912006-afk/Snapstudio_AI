@@ -220,7 +220,7 @@ const STEPS = [
 
 export default function LandingPage() {
   return (
-    <div className="relative min-h-screen overflow-x-hidden bg-black text-[#f5f5f7] select-none" style={{ fontFamily: "var(--font-body)" }}>
+    <div className="relative min-h-screen overflow-x-hidden text-[#f5f5f7] select-none" style={{ fontFamily: "var(--font-body)", background: "var(--bg-base)" }}>
 
       {/* ── BACKGROUND LIGHTING SPEC ─────────────────────────────── */}
       <div className="absolute top-[-10%] left-[-10%] w-[60%] aspect-square rounded-full bg-[radial-gradient(circle_at_center,rgba(217,119,6,0.06)_0%,transparent_70%)] blur-[120px] pointer-events-none z-0" />
@@ -228,12 +228,34 @@ export default function LandingPage() {
       <div className="absolute bottom-[-5%] left-[20%] w-[55%] aspect-square rounded-full bg-[radial-gradient(circle_at_center,rgba(217,119,6,0.03)_0%,transparent_70%)] blur-[120px] pointer-events-none z-0" />
 
       {/* ── NAV BAR (Apple Style Header) ─────────────────────────── */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-[#000000]/70 backdrop-blur-[24px] border-b border-white/[0.06] h-[52px] flex items-center">
+      <header className="fixed top-0 left-0 right-0 z-50 backdrop-blur-[24px] border-b border-white/[0.06] h-[52px] flex items-center" style={{ background: "rgba(24,24,29,0.82)" }}>
         <div className="w-full max-w-5xl mx-auto px-6 flex items-center justify-between">
           <div className="flex items-center gap-2.5 cursor-pointer">
-            <div className="w-6 h-6 rounded-md bg-[#ffffff] flex items-center justify-center shadow-md">
-              <span className="text-[0.75rem] font-bold text-black font-display">S</span>
-            </div>
+            {/* ── Aperture + AI spark logo mark ── */}
+            <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect width="28" height="28" rx="7" fill="#222228"/>
+              {/* Aperture blades */}
+              <g opacity="0.9">
+                <rect x="13.2" y="4" width="1.6" height="8" rx="0.8" fill="#3a3a48" transform="rotate(0 14 14)"/>
+                <rect x="13.2" y="4" width="1.6" height="8" rx="0.8" fill="#3a3a48" transform="rotate(60 14 14)"/>
+                <rect x="13.2" y="4" width="1.6" height="8" rx="0.8" fill="#3a3a48" transform="rotate(120 14 14)"/>
+                <rect x="13.2" y="4" width="1.6" height="8" rx="0.8" fill="#3a3a48" transform="rotate(180 14 14)"/>
+                <rect x="13.2" y="4" width="1.6" height="8" rx="0.8" fill="#3a3a48" transform="rotate(240 14 14)"/>
+                <rect x="13.2" y="4" width="1.6" height="8" rx="0.8" fill="#3a3a48" transform="rotate(300 14 14)"/>
+              </g>
+              {/* Outer ring */}
+              <circle cx="14" cy="14" r="9" stroke="#3a3a48" strokeWidth="1" fill="none" opacity="0.5"/>
+              {/* Inner amber glow */}
+              <circle cx="14" cy="14" r="4.5" fill="url(#amberGrad)" opacity="0.95"/>
+              {/* AI spark / lightning */}
+              <path d="M14.8 10.5 L12.5 14.2 L14.2 14.2 L13.2 17.5 L15.8 13.5 L14 13.5 Z" fill="#1a0e00" opacity="0.9"/>
+              <defs>
+                <radialGradient id="amberGrad" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stopColor="#fbbf24"/>
+                  <stop offset="100%" stopColor="#d97706"/>
+                </radialGradient>
+              </defs>
+            </svg>
             <div className="leading-[1.1]">
               <span className="font-display font-medium text-[0.8rem] tracking-tight text-[#f5f5f7]">
                 Snap<span className="text-amber-500 font-semibold">Studio</span>
@@ -435,8 +457,8 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── DECOUPLED ARCHITECTURE (How It Works) ───────────────── */}
-      <section className="relative z-10 w-full py-24 px-6 border-b border-white/[0.06] bg-black">
+      {/* ── DECOUPLED ARCHITECTURE (How It Works) ───────────── */}
+      <section className="relative z-10 w-full py-24 px-6 border-b border-white/[0.06]" style={{ background: "var(--bg-void)" }}>
         <div className="w-full max-w-4xl mx-auto">
           {/* Header */}
           <motion.div
@@ -510,17 +532,120 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── FOOTER BAR ───────────────────────────────────────────── */}
-      <footer className="relative z-10 w-full py-8 border-t border-white/[0.04] bg-black">
-        <div className="max-w-5xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="font-mono text-[0.58rem] tracking-[0.16em] text-[#86868b] uppercase">
-            SNAPSTUDIO AI · NEXT.JS HYBRID STACK WORKSPACE · 2026
-          </p>
-          <div className="flex gap-4">
-            <Link href="https://github.com/chaitanyabhujbal912006-afk/Snapstudio_AI" target="_blank" className="font-mono text-[0.58rem] tracking-tight text-zinc-500 hover:text-white transition-colors duration-150">
-              GITHUB CODEBASE
-            </Link>
+      {/* ── FOOTER ─────────────────────────────────────────────── */}
+      <footer className="relative z-10 w-full border-t border-white/[0.06]" style={{ background: "var(--bg-void)" }}>
+
+        {/* Top amber glow line */}
+        <div style={{ height: 1, background: "linear-gradient(90deg, transparent 0%, rgba(217,119,6,0.4) 50%, transparent 100%)" }} />
+
+        <div className="max-w-5xl mx-auto px-6 py-12">
+
+          {/* 3-column grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-10">
+
+            {/* Brand column */}
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center gap-2.5">
+                <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect width="28" height="28" rx="7" fill="#222228"/>
+                  <g opacity="0.9">
+                    <rect x="13.2" y="4" width="1.6" height="8" rx="0.8" fill="#3a3a48" transform="rotate(0 14 14)"/>
+                    <rect x="13.2" y="4" width="1.6" height="8" rx="0.8" fill="#3a3a48" transform="rotate(60 14 14)"/>
+                    <rect x="13.2" y="4" width="1.6" height="8" rx="0.8" fill="#3a3a48" transform="rotate(120 14 14)"/>
+                    <rect x="13.2" y="4" width="1.6" height="8" rx="0.8" fill="#3a3a48" transform="rotate(180 14 14)"/>
+                    <rect x="13.2" y="4" width="1.6" height="8" rx="0.8" fill="#3a3a48" transform="rotate(240 14 14)"/>
+                    <rect x="13.2" y="4" width="1.6" height="8" rx="0.8" fill="#3a3a48" transform="rotate(300 14 14)"/>
+                  </g>
+                  <circle cx="14" cy="14" r="9" stroke="#3a3a48" strokeWidth="1" fill="none" opacity="0.5"/>
+                  <circle cx="14" cy="14" r="4.5" fill="url(#amberGradF)" opacity="0.95"/>
+                  <path d="M14.8 10.5 L12.5 14.2 L14.2 14.2 L13.2 17.5 L15.8 13.5 L14 13.5 Z" fill="#1a0e00" opacity="0.9"/>
+                  <defs>
+                    <radialGradient id="amberGradF" cx="50%" cy="50%" r="50%">
+                      <stop offset="0%" stopColor="#fbbf24"/>
+                      <stop offset="100%" stopColor="#d97706"/>
+                    </radialGradient>
+                  </defs>
+                </svg>
+                <span className="font-display font-semibold text-[0.9rem] text-[#f5f5f7] tracking-tight">
+                  Snap<span className="text-amber-500">Studio</span>{" "}
+                  <span className="text-amber-500/60 font-mono text-[0.6rem] align-middle">AI</span>
+                </span>
+              </div>
+              <p className="text-[0.72rem] text-[#515154] leading-relaxed max-w-[220px]">
+                AI-powered photo editing workspace — 13 GPU engines, zero latency client tools, free to use.
+              </p>
+              <div className="flex flex-wrap gap-1.5 mt-1">
+                {["Next.js 16", "Gradio", "Python", "Kaggle GPU"].map(t => (
+                  <span key={t} className="font-mono text-[0.52rem] tracking-wider px-2 py-0.5 rounded-full border border-white/[0.07] text-[#515154]">{t}</span>
+                ))}
+              </div>
+            </div>
+
+            {/* Links column */}
+            <div className="flex flex-col gap-3">
+              <p className="font-mono text-[0.55rem] tracking-[0.2em] text-[#515154] uppercase mb-1">Project</p>
+              <Link href="https://github.com/chaitanyabhujbal912006-afk/Snapstudio_AI" target="_blank"
+                className="flex items-center gap-2 text-[0.75rem] text-[#86868b] hover:text-amber-400 transition-colors duration-200 group">
+                <svg viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5 opacity-70 group-hover:opacity-100">
+                  <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+                </svg>
+                GitHub Repository
+              </Link>
+              <Link href="/editor"
+                className="flex items-center gap-2 text-[0.75rem] text-[#86868b] hover:text-amber-400 transition-colors duration-200 group">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-3.5 h-3.5 opacity-70 group-hover:opacity-100">
+                  <path d="M2 8h12M8 2l6 6-6 6" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                Open Studio Editor
+              </Link>
+              <Link href="https://github.com/chaitanyabhujbal912006-afk/Snapstudio_AI/blob/main/kaggle_notebook.ipynb" target="_blank"
+                className="flex items-center gap-2 text-[0.75rem] text-[#86868b] hover:text-amber-400 transition-colors duration-200 group">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-3.5 h-3.5 opacity-70 group-hover:opacity-100">
+                  <rect x="2" y="2" width="12" height="12" rx="2"/>
+                  <path d="M5 6l3 2-3 2M9 10h2" strokeLinecap="round"/>
+                </svg>
+                Kaggle Notebook
+              </Link>
+            </div>
+
+            {/* Creator column */}
+            <div className="flex flex-col gap-3">
+              <p className="font-mono text-[0.55rem] tracking-[0.2em] text-[#515154] uppercase mb-1">Creator</p>
+              <Link href="https://github.com/chaitanyabhujbal912006-afk" target="_blank"
+                className="group flex items-center gap-3 p-3 rounded-xl border border-white/[0.06] hover:border-amber-500/30 hover:bg-amber-500/[0.03] transition-all duration-200">
+                <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0"
+                  style={{ background: "linear-gradient(135deg, #d97706, #fbbf24)", color: "#1a0e00" }}>
+                  C
+                </div>
+                <div>
+                  <p className="text-[0.78rem] font-semibold text-[#f5f5f7] group-hover:text-amber-400 transition-colors">Chaitanya Bhujbal</p>
+                  <p className="text-[0.62rem] text-[#515154] font-mono">@chaitanyabhujbal912006-afk</p>
+                </div>
+              </Link>
+              <p className="text-[0.65rem] text-[#515154] leading-relaxed">
+                Built with ❤️ using Next.js, Python &amp; Gradio on Kaggle free GPU.
+              </p>
+            </div>
           </div>
+
+          {/* Bottom copyright bar */}
+          <div className="pt-6 border-t border-white/[0.05] flex flex-col md:flex-row items-center justify-between gap-3">
+            <p className="font-mono text-[0.52rem] tracking-[0.16em] text-[#515154] uppercase">
+              © 2026 SnapStudio AI · Made by Chaitanya Bhujbal · All rights reserved
+            </p>
+            <div className="flex items-center gap-4">
+              <Link href="https://github.com/chaitanyabhujbal912006-afk" target="_blank"
+                className="font-mono text-[0.52rem] tracking-wider text-[#515154] hover:text-amber-400 transition-colors uppercase">
+                GitHub Profile
+              </Link>
+              <span className="text-white/10">·</span>
+              <Link href="https://github.com/chaitanyabhujbal912006-afk/Snapstudio_AI" target="_blank"
+                className="font-mono text-[0.52rem] tracking-wider text-[#515154] hover:text-amber-400 transition-colors uppercase">
+                Source Code
+              </Link>
+            </div>
+          </div>
+
         </div>
       </footer>
 

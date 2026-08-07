@@ -249,7 +249,7 @@ export default function Home() {
           overflow: "hidden",
           display: "flex",
           flexDirection: "column",
-          background: "var(--bg-void)",
+          background: "var(--bg-base)",
         }}
       >
         {/* Ambient orbs */}
@@ -265,6 +265,7 @@ export default function Home() {
             zIndex: 10,
             display: "flex",
             flex: 1,
+            minHeight: 0,
             paddingTop: 70,
             maxWidth: 1320,
             margin: "0 auto",
@@ -278,6 +279,7 @@ export default function Home() {
           <main
             style={{
               flex: 1,
+              minHeight: 0,
               overflowY: "auto",
               padding: "28px 28px 24px",
               display: "flex",
@@ -345,10 +347,8 @@ export default function Home() {
               style={{
                 borderRadius: 16,
                 border: "1px solid var(--border-subtle)",
-                background: "rgba(17,17,32,0.7)",
+                background: "var(--bg-surface)",
                 backdropFilter: "blur(20px)",
-                overflow: "hidden",
-                flex: 1,
               }}
             >
               {/* Top accent */}

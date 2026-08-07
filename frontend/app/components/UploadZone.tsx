@@ -57,8 +57,8 @@ export default function UploadZone({ onFile, preview, label = "Drop your photo h
         background: isDragging
           ? "rgba(245,158,11,0.06)"
           : preview
-          ? "rgba(8,8,16,0.5)"
-          : "rgba(17,17,32,0.4)",
+          ? "var(--bg-raised)"
+          : "var(--bg-surface)",
         cursor: "pointer",
         overflow: "hidden",
         transition: "all 0.25s ease",
