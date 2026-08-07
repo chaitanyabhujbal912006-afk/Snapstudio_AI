@@ -63,19 +63,33 @@ export function BackendProvider({ children }: { children: ReactNode }) {
     setConnectionError("");
 
     try {
-      // Always route through /api/proxy to avoid CORS (works for both
-      // local 127.0.0.1 and remote *.gradio.live URLs)
-
-      // ── STEP 1: POST to kick off the api_get_presets call ──────────────────
-      const postRes = await fetch("/api/proxy", {
+      // ── STEP 1: DETECT GRADIO VERSION AND GET EVENT ID ────────────────────
+      // Gradio 5+ prefixes API routes with /gradio_api. Try that first, and
+      // fall back to legacy route if it returns 404.
+      let testPrefix = "/gradio_api";
+      let postRes = await fetch("/api/proxy", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-target-url": `${trimmed}/call/api_get_presets`,
+          "x-target-url": `${trimmed}${testPrefix}/call/api_get_presets`,
         },
         body: JSON.stringify({ data: [] }),
-        signal: AbortSignal.timeout(30_000),
+        signal: AbortSignal.timeout(15_000), // 15s timeout for fast check
       });
+
+      if (postRes.status === 404) {
+        console.log("[BackendContext] /gradio_api prefix not found, falling back to legacy route");
+        testPrefix = "";
+        postRes = await fetch("/api/proxy", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-target-url": `${trimmed}/call/api_get_presets`,
+          },
+          body: JSON.stringify({ data: [] }),
+          signal: AbortSignal.timeout(15_000),
+        });
+      }
 
       if (!postRes.ok) {
         let errMsg = `HTTP ${postRes.status}`;
@@ -100,7 +114,7 @@ export function BackendProvider({ children }: { children: ReactNode }) {
       const getRes = await fetch("/api/proxy", {
         method: "GET",
         headers: {
-          "x-target-url": `${trimmed}/call/api_get_presets/${eventId}`,
+          "x-target-url": `${trimmed}${testPrefix}/call/api_get_presets/${eventId}`,
         },
       });
 
@@ -115,7 +129,8 @@ export function BackendProvider({ children }: { children: ReactNode }) {
         setPresets(parsed[0] as BackendPresets);
       }
 
-      setBackendUrl(trimmed);
+      // Save base URL with the detected prefix so all other API calls route correctly
+      setBackendUrl(trimmed + testPrefix);
       setIsConnected(true);
       setIsConnecting(false);
       return true;
