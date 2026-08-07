@@ -62,32 +62,20 @@ export function BackendProvider({ children }: { children: ReactNode }) {
     setIsConnected(false);
     setConnectionError("");
 
-    const isRemote =
-      trimmed.includes(".gradio.live") ||
-      trimmed.startsWith("https://") ||
-      trimmed.includes("gradio.app");
-
     try {
+      // Always route through /api/proxy to avoid CORS (works for both
+      // local 127.0.0.1 and remote *.gradio.live URLs)
+
       // ── STEP 1: POST to kick off the api_get_presets call ──────────────────
-      let postRes: Response;
-      if (isRemote) {
-        postRes = await fetch("/api/proxy", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-target-url": `${trimmed}/call/api_get_presets`,
-          },
-          body: JSON.stringify({ data: [] }),
-          signal: AbortSignal.timeout(30_000), // 30 s — fail fast if backend unreachable
-        });
-      } else {
-        postRes = await fetch(`${trimmed}/call/api_get_presets`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ data: [] }),
-          signal: AbortSignal.timeout(30_000),
-        });
-      }
+      const postRes = await fetch("/api/proxy", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-target-url": `${trimmed}/call/api_get_presets`,
+        },
+        body: JSON.stringify({ data: [] }),
+        signal: AbortSignal.timeout(30_000),
+      });
 
       if (!postRes.ok) {
         let errMsg = `HTTP ${postRes.status}`;
@@ -109,17 +97,12 @@ export function BackendProvider({ children }: { children: ReactNode }) {
       }
 
       // ── STEP 2: GET the SSE result ─────────────────────────────────────────
-      let getRes: Response;
-      if (isRemote) {
-        getRes = await fetch("/api/proxy", {
-          method: "GET",
-          headers: {
-            "x-target-url": `${trimmed}/call/api_get_presets/${eventId}`,
-          },
-        });
-      } else {
-        getRes = await fetch(`${trimmed}/call/api_get_presets/${eventId}`);
-      }
+      const getRes = await fetch("/api/proxy", {
+        method: "GET",
+        headers: {
+          "x-target-url": `${trimmed}/call/api_get_presets/${eventId}`,
+        },
+      });
 
       if (!getRes.ok) {
         throw new Error(`GET poll failed — HTTP ${getRes.status}`);
@@ -139,7 +122,7 @@ export function BackendProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       const friendly = msg.includes("abort") || msg.includes("timeout")
-        ? "Connection timed out — is the Kaggle backend running and the URL correct?"
+        ? "Connection timed out — is the backend running and the URL correct?"
         : msg;
       console.error("[BackendContext] Connection error:", msg);
       setConnectionError(friendly);

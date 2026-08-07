@@ -14,32 +14,19 @@
 // ── Core Gradio caller ────────────────────────────────────────────────────────
 
 async function gradioCall(baseUrl: string, fnName: string, payload: unknown[]): Promise<unknown[]> {
-  const isRemote =
-    baseUrl.startsWith("https://") ||
-    baseUrl.includes(".gradio.live") ||
-    baseUrl.includes("gradio.app");
+  // Always route through /api/proxy — avoids CORS for both local (127.0.0.1)
+  // and remote (*.gradio.live) backends.
 
   // ── STEP 1: POST — kick off the job, get back an event_id ────────────────
-  let postRes: Response;
-
-  if (isRemote) {
-    postRes = await fetch("/api/proxy", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-target-url": `${baseUrl}/call/${fnName}`,
-      },
-      body: JSON.stringify({ data: payload }),
-      signal: AbortSignal.timeout(30_000), // 30 s to get event_id
-    });
-  } else {
-    postRes = await fetch(`${baseUrl}/call/${fnName}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ data: payload }),
-      signal: AbortSignal.timeout(30_000),
-    });
-  }
+  const postRes = await fetch("/api/proxy", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-target-url": `${baseUrl}/call/${fnName}`,
+    },
+    body: JSON.stringify({ data: payload }),
+    signal: AbortSignal.timeout(30_000), // 30 s to get event_id
+  });
 
   if (!postRes.ok) {
     let msg = `POST ${fnName} failed: HTTP ${postRes.status}`;
@@ -56,20 +43,14 @@ async function gradioCall(baseUrl: string, fnName: string, payload: unknown[]): 
   if (!event_id) throw new Error(`No event_id returned by ${fnName} — is the backend running?`);
 
   // ── STEP 2: GET — stream the SSE until the job completes ─────────────────
-  let getRes: Response;
-
-  if (isRemote) {
-    // No AbortSignal timeout here — GPU jobs can take 1–4+ minutes.
-    // Vercel proxy maxDuration=300s is the effective ceiling.
-    getRes = await fetch("/api/proxy", {
-      method: "GET",
-      headers: {
-        "x-target-url": `${baseUrl}/call/${fnName}/${event_id}`,
-      },
-    });
-  } else {
-    getRes = await fetch(`${baseUrl}/call/${fnName}/${event_id}`);
-  }
+  // No AbortSignal timeout here — GPU jobs can take 1–4+ minutes.
+  // Vercel proxy maxDuration=300s is the effective ceiling.
+  const getRes = await fetch("/api/proxy", {
+    method: "GET",
+    headers: {
+      "x-target-url": `${baseUrl}/call/${fnName}/${event_id}`,
+    },
+  });
 
   if (!getRes.ok) {
     let msg = `GET ${fnName} result failed: HTTP ${getRes.status}`;
