@@ -133,6 +133,14 @@ export function BackendProvider({ children }: { children: ReactNode }) {
       setBackendUrl(trimmed + testPrefix);
       setIsConnected(true);
       setIsConnecting(false);
+
+      // Save to localStorage so it auto-reconnects on page reload
+      try {
+        localStorage.setItem("snapstudio_backend_url", trimmed);
+      } catch (e) {
+        console.warn("[BackendContext] Failed to save backend URL to localStorage:", e);
+      }
+
       return true;
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -149,6 +157,19 @@ export function BackendProvider({ children }: { children: ReactNode }) {
 
   React.useEffect(() => {
     const autoConnect = async () => {
+      // 1. Try to auto-connect to localStorage saved URL first
+      try {
+        const saved = localStorage.getItem("snapstudio_backend_url");
+        if (saved) {
+          console.log("[BackendContext] Auto-connecting to saved localStorage link:", saved);
+          const success = await connect(saved);
+          if (success) return; // connected successfully!
+        }
+      } catch (e) {
+        console.warn("[BackendContext] Failed to read backend URL from localStorage:", e);
+      }
+
+      // 2. Fallback: try remote synced Kaggle registry sync
       try {
         const res = await fetch("/api/backend", { cache: "no-store" });
         if (res.ok) {
@@ -162,7 +183,10 @@ export function BackendProvider({ children }: { children: ReactNode }) {
         console.error("[BackendContext] Failed to retrieve registered URL:", err);
       }
     };
-    autoConnect();
+
+    if (typeof window !== "undefined") {
+      autoConnect();
+    }
   }, [connect]);
 
   return (
