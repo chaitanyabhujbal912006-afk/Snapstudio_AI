@@ -21,6 +21,8 @@ interface BackendContextType {
   connect: (url: string) => Promise<boolean>;
   presets: BackendPresets | null;
   connectionError: string;
+  activeImage: string | null;
+  setActiveImage: (image: string | null) => void;
 }
 
 const BackendContext = createContext<BackendContextType | null>(null);
@@ -52,6 +54,32 @@ export function BackendProvider({ children }: { children: ReactNode }) {
   const [isConnecting, setIsConnecting] = useState(false);
   const [presets, setPresets] = useState<BackendPresets | null>(null);
   const [connectionError, setConnectionError] = useState("");
+  const [activeImage, setActiveImageState] = useState<string | null>(null);
+
+  // Load from sessionStorage on mount (only in browser)
+  React.useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem("snapstudio_active_image");
+      if (saved) {
+        setActiveImageState(saved);
+      }
+    } catch (e) {
+      console.warn("[BackendContext] Failed to read active image from sessionStorage:", e);
+    }
+  }, []);
+
+  const setActiveImage = useCallback((img: string | null) => {
+    setActiveImageState(img);
+    try {
+      if (img) {
+        sessionStorage.setItem("snapstudio_active_image", img);
+      } else {
+        sessionStorage.removeItem("snapstudio_active_image");
+      }
+    } catch (e) {
+      console.warn("[BackendContext] Failed to write active image to sessionStorage:", e);
+    }
+  }, []);
 
   const connect = useCallback(async (url: string): Promise<boolean> => {
     // Normalize URL — strip trailing slash
@@ -194,7 +222,17 @@ export function BackendProvider({ children }: { children: ReactNode }) {
 
   return (
     <BackendContext.Provider
-      value={{ backendUrl, setBackendUrl, isConnected, isConnecting, connect, presets, connectionError }}
+      value={{
+        backendUrl,
+        setBackendUrl,
+        isConnected,
+        isConnecting,
+        connect,
+        presets,
+        connectionError,
+        activeImage,
+        setActiveImage,
+      }}
     >
       {children}
     </BackendContext.Provider>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Maximize2, Loader2, ArrowUp } from "lucide-react";
 import UploadZone from "@/app/components/UploadZone";
@@ -9,21 +9,33 @@ import { useBackend } from "@/app/context/BackendContext";
 import { apiUpscale } from "@/app/lib/api";
 
 export default function UpscalePanel() {
-  const { backendUrl, isConnected } = useBackend();
-  const [preview, setPreview] = useState<string | null>(null);
-  const [imageB64, setImageB64] = useState<string | null>(null);
+  const { backendUrl, isConnected, activeImage, setActiveImage } = useBackend();
+  const [preview, setPreview] = useState<string | null>(activeImage);
+  const [imageB64, setImageB64] = useState<string | null>(activeImage);
   const [result, setResult] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState("");
   const [scale, setScale] = useState(4);
   const [imgSize, setImgSize] = useState<{ w: number; h: number } | null>(null);
 
+  // Sync with global active image
+  useEffect(() => {
+    if (activeImage) {
+      setPreview(activeImage);
+      setImageB64(activeImage);
+      // Re-read dimensions from the restored image
+      const img = new Image();
+      img.onload = () => setImgSize({ w: img.naturalWidth, h: img.naturalHeight });
+      img.src = activeImage;
+    }
+  }, [activeImage]);
+
   const handleFile = useCallback((file: File, b64: string) => {
-    setPreview(b64); setImageB64(b64); setResult(null); setError("");
+    setPreview(b64); setImageB64(b64); setActiveImage(b64); setResult(null); setError("");
     const img = new Image();
     img.onload = () => setImgSize({ w: img.naturalWidth, h: img.naturalHeight });
     img.src = b64;
-  }, []);
+  }, [setActiveImage]);
 
   const handleRun = async () => {
     if (!imageB64 || !isConnected) return;
