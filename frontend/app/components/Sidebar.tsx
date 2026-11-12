@@ -26,6 +26,7 @@ interface Category {
   badge?: string;
   badgeColor: string;
   features: Feature[];
+  gradient: string;
 }
 
 const CATEGORIES: Category[] = [
@@ -33,6 +34,7 @@ const CATEGORIES: Category[] = [
     label: "Live Studio",
     badge: "0ms · Client",
     badgeColor: "#10b981",
+    gradient: "from-emerald-500/10 to-teal-500/5",
     features: [
       { id: "canvas_studio", label: "Live Canvas Studio", icon: Crop, speed: "0ms", color: "#10b981" },
     ],
@@ -41,6 +43,7 @@ const CATEGORIES: Category[] = [
     label: "Quick Edit",
     badge: "CPU · Instant",
     badgeColor: "#06b6d4",
+    gradient: "from-cyan-500/10 to-blue-500/5",
     features: [
       { id: "enhance",     label: "Auto-Enhance",     icon: Sparkles,          speed: "~2s",   color: "#06b6d4" },
       { id: "color_grade", label: "Color Grade",       icon: SlidersHorizontal, speed: "~0.2s", color: "#f59e0b" },
@@ -55,6 +58,7 @@ const CATEGORIES: Category[] = [
     label: "AI Enhance",
     badge: "GPU · 5–30s",
     badgeColor: "#f59e0b",
+    gradient: "from-amber-500/10 to-orange-500/5",
     features: [
       { id: "upscale",      label: "Upscale 4×",     icon: Maximize2,       speed: "~15s", color: "#f97316" },
       { id: "face_enhance", label: "Face Restore",    icon: Scan,            speed: "~20s", color: "#ec4899" },
@@ -65,6 +69,7 @@ const CATEGORIES: Category[] = [
     label: "AI Transform",
     badge: "GPU · 1–5 min",
     badgeColor: "#f87171",
+    gradient: "from-rose-500/10 to-red-500/5",
     features: [
       { id: "bg_swap",       label: "Background Swap",  icon: ImageIcon, speed: "~2 min", color: "#8b5cf6" },
       { id: "style_filter",  label: "Style Filter",     icon: Palette,   speed: "~60s",   color: "#f59e0b" },
@@ -76,6 +81,7 @@ const CATEGORIES: Category[] = [
     label: "Generate",
     badge: "GPU · ~10s",
     badgeColor: "#fb923c",
+    gradient: "from-orange-500/10 to-amber-500/5",
     features: [
       { id: "text2img", label: "Text → Image", icon: Type, speed: "~10s", color: "#fb923c" },
     ],
