@@ -358,7 +358,7 @@ def api_relight(
         )
         return {"success": True, "image": _pil_to_b64(result)}
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return {"success": False, "error": _safe_error("Relight", e)}
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
