@@ -700,7 +700,12 @@ if __name__ == "__main__":
     import requests
 
     def sync_url_thread():
-        time.sleep(6)  # Wait for the tunnel link to register and print
+        # Wait for the Gradio tunnel URL to be printed and assigned
+        for _ in range(30):  # poll up to 30s in 1s steps
+            time.sleep(1)
+            url = getattr(demo, "share_url", None)
+            if url:
+                break
         url = getattr(demo, "share_url", None)
         if url:
             print(f"📡 Syncing registered GPU link {url} to Next.js API...")
@@ -723,14 +728,18 @@ if __name__ == "__main__":
             except Exception as e:
                 print(f"⚠️ Error occurred during registry sync: {e}")
         else:
-            print("⚠️ Gradio did not generate a share_url. If running locally, skip sync.")
+            print("⚠️ Gradio did not generate a share_url (share=False or tunnel failed). Skipping sync.")
+
+    # share=True is required on Kaggle to get a public *.gradio.live tunnel URL.
+    # Override with GRADIO_SHARE=0 to disable sharing in local / private environments.
+    _share = os.environ.get("GRADIO_SHARE", "1") == "1"
 
     threading.Thread(target=sync_url_thread, daemon=True).start()
 
     demo.launch(
         server_name="0.0.0.0",   # bind to all interfaces
         server_port=7860,
-        share=False,             # set True only on Kaggle for public *.gradio.live URL
+        share=_share,            # True on Kaggle (default) → public *.gradio.live URL
         show_error=True,
         debug=False,
     )

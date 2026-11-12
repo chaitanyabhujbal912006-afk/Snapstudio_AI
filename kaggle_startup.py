@@ -116,5 +116,16 @@ gr.close_all()  # close any in-process Gradio servers
 print("\n🚀 Starting SnapStudio AI backend...")
 print("   Waiting for URL (models download on first run — may take 5-10 minutes)...\n")
 
-exec(open("backend_app.py").read())
+# Launch backend_app.py as a subprocess so that:
+#   1. Its `if __name__ == "__main__"` guard fires correctly.
+#   2. It runs in its own process with a clean namespace.
+#   3. exec() namespace leaks and import side-effects are avoided.
+import subprocess, sys
+proc = subprocess.Popen(
+    [sys.executable, "backend_app.py"],
+    stdout=sys.stdout,
+    stderr=sys.stderr,
+)
+print(f"✅ Backend process started (PID {proc.pid}). Watch the output above for the gradio.live URL.")
+proc.wait()  # Keep the notebook cell running until the backend exits
 
