@@ -420,7 +420,8 @@ def api_bg_swap(
             bg_blurred = dip_bg_blur(img, mask, blur_amount=25.0)
             return {"success": True, "images": [_pil_to_b64(bg_blurred)]}
         except Exception as dip_e:
-            return {"success": False, "error": f"{e} (DIP Fallback error: {dip_e})"}
+            traceback.print_exc()
+            return {"success": False, "error": "Background swap failed (GPU and DIP fallback both failed). Please try again."}
 
 
 def api_style_filter(
