@@ -10,6 +10,8 @@ import os
 import gc
 import io
 import base64
+import traceback
+import threading
 import torch
 
 # ── Thread limits (important on shared GPU instances) ──────────────────────────
@@ -59,6 +61,11 @@ def _lazy_gpu_import(name: str):
 
 # ── Model memory management ────────────────────────────────────────────────────
 
+# Lock to prevent concurrent Gradio queue workers from racing on GPU model
+# teardown — without this, two simultaneous requests can both clear each
+# other's pipeline reference while the other thread is still using it.
+_gpu_lock = threading.Lock()
+
 def free_gpu_models(keep: str = None):
     """Unload GPU models dynamically to prevent OOM. Safe in DIP-only mode."""
     import sys
@@ -66,48 +73,49 @@ def free_gpu_models(keep: str = None):
     if _DIP_ONLY:
         return  # No GPU models loaded — nothing to free
 
-    # Ensure PyTorch default GPU device index aligns with the target pipeline's device
-    if keep and keep != "clear_all":
-        from pipeline.device_helper import set_active_cuda_device
-        set_active_cuda_device(keep)
+    with _gpu_lock:
+        # Ensure PyTorch default GPU device index aligns with the target pipeline's device
+        if keep and keep != "clear_all":
+            from pipeline.device_helper import set_active_cuda_device
+            set_active_cuda_device(keep)
 
-    # If 2+ GPUs available keep all models warm
-    if torch.cuda.is_available() and torch.cuda.device_count() >= 2:
-        return
-
-    cleared = False
-
-    def clear_mod(mod_name: str, attr: str):
-        nonlocal cleared
-        mod = sys.modules.get(f"pipeline.{mod_name}")
-        if mod is None:
+        # If 2+ GPUs available keep all models warm
+        if torch.cuda.is_available() and torch.cuda.device_count() >= 2:
             return
-        obj = getattr(mod, attr, None)
-        if obj is not None:
-            setattr(mod, attr, None)
-            cleared = True
 
-    if keep != "inpaint":   clear_mod("inpaint", "_pipe")
-    if keep != "style":     clear_mod("style_filter", "_pipe")
-    if keep != "bg_swap":   clear_mod("generate_bg", "_pipe")
+        cleared = False
 
-    # Swin2SR (upscale) is extremely lightweight (~800MB VRAM). Keep it loaded
-    # even when switching to prevent slow model init on face restoration requests,
-    # unless explicitly doing a clear all.
-    if keep == "clear_all":
-        clear_mod("inpaint", "_pipe")
-        clear_mod("style_filter", "_pipe")
-        clear_mod("generate_bg", "_pipe")
-        clear_mod("upscale", "_model")
-        clear_mod("upscale", "_processor")
-        clear_mod("text2img", "_t2i_pipe")
-    elif keep != "t2i":
-        clear_mod("text2img", "_t2i_pipe")
+        def clear_mod(mod_name: str, attr: str):
+            nonlocal cleared
+            mod = sys.modules.get(f"pipeline.{mod_name}")
+            if mod is None:
+                return
+            obj = getattr(mod, attr, None)
+            if obj is not None:
+                setattr(mod, attr, None)
+                cleared = True
 
-    if cleared:
-        gc.collect()
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
+        if keep != "inpaint":   clear_mod("inpaint", "_pipe")
+        if keep != "style":     clear_mod("style_filter", "_pipe")
+        if keep != "bg_swap":   clear_mod("generate_bg", "_pipe")
+
+        # Swin2SR (upscale) is extremely lightweight (~800MB VRAM). Keep it loaded
+        # even when switching to prevent slow model init on face restoration requests,
+        # unless explicitly doing a clear all.
+        if keep == "clear_all":
+            clear_mod("inpaint", "_pipe")
+            clear_mod("style_filter", "_pipe")
+            clear_mod("generate_bg", "_pipe")
+            clear_mod("upscale", "_model")
+            clear_mod("upscale", "_processor")
+            clear_mod("text2img", "_t2i_pipe")
+        elif keep != "t2i":
+            clear_mod("text2img", "_t2i_pipe")
+
+        if cleared:
+            gc.collect()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
 
 
 
@@ -128,6 +136,12 @@ def _pil_to_b64(img: Image.Image, fmt: str = "PNG") -> str:
     return f"data:image/{mime};base64," + base64.b64encode(buf.getvalue()).decode()
 
 
+def _safe_error(context: str, exc: Exception) -> str:
+    """Log the full traceback server-side; return a sanitized message to the client."""
+    traceback.print_exc()
+    return f"{context} failed. Please try again."
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # QUICK EDIT — Pure CPU, instant results
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -139,7 +153,7 @@ def api_enhance(image_b64: str) -> dict:
         result = auto_enhance(img)
         return {"success": True, "image": _pil_to_b64(result)}
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return {"success": False, "error": _safe_error("Auto-enhance", e)}
 
 
 def api_color_grade(
@@ -175,7 +189,7 @@ def api_color_grade(
         )
         return {"success": True, "image": _pil_to_b64(result)}
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return {"success": False, "error": _safe_error("Color grade", e)}
 
 
 def api_retouch(
@@ -201,7 +215,7 @@ def api_retouch(
         )
         return {"success": True, "image": _pil_to_b64(result)}
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return {"success": False, "error": _safe_error("Portrait retouch", e)}
 
 
 def api_denoise(image_b64: str, strength: float, mode: str, preserve_color: bool) -> dict:
@@ -211,7 +225,7 @@ def api_denoise(image_b64: str, strength: float, mode: str, preserve_color: bool
         result = denoise(img, strength=strength, mode=mode, preserve_color=preserve_color)
         return {"success": True, "image": _pil_to_b64(result)}
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return {"success": False, "error": _safe_error("Denoise", e)}
 
 
 def api_effect(image_b64: str, effect: str, params: dict) -> dict:
@@ -248,7 +262,7 @@ def api_effect(image_b64: str, effect: str, params: dict) -> dict:
 
         return {"success": True, "image": _pil_to_b64(result)}
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return {"success": False, "error": _safe_error("Effect", e)}
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -271,7 +285,8 @@ def api_upscale(image_b64: str, scale: int) -> dict:
             result = dip_upscale(img, scale=scale)
             return {"success": True, "image": _pil_to_b64(result)}
         except Exception as dip_e:
-            return {"success": False, "error": f"{e} (DIP Fallback error: {dip_e})"}
+            traceback.print_exc()
+            return {"success": False, "error": "Upscale failed (GPU and DIP fallback both failed). Please try again."}
 
 
 def api_face_enhance(
