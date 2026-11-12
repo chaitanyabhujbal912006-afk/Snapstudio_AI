@@ -21,19 +21,11 @@ const getSupabaseClient = () => {
 export async function GET() {
   try {
     const supabase = getSupabaseClient();
-    
-    const diagnostics = {
-      SUPABASE_URL_configured: !!supabaseUrl,
-      SUPABASE_SERVICE_ROLE_KEY_configured: !!supabaseServiceKey,
-      SECRET_REGISTRY_KEY_configured: !!registrySecret
-    };
 
     if (!supabase) {
-      console.warn("[Registry GET] Supabase is not configured yet. Returning placeholder.");
-      return NextResponse.json({ 
-        url: "", 
-        diagnostics 
-      });
+      // DB not configured yet — return empty URL without leaking env var state
+      console.warn("[Registry GET] Supabase is not configured yet.");
+      return NextResponse.json({ url: "" });
     }
 
     const { data, error } = await supabase
@@ -43,28 +35,16 @@ export async function GET() {
       .single();
 
     if (error) {
+      // Log the real error server-side; return a generic message to the client
       console.error("[Registry GET] Database query failed:", error.message);
-      return NextResponse.json({ 
-        error: error.message, 
-        diagnostics 
-      }, { status: 500 });
+      return NextResponse.json({ error: "Registry unavailable" }, { status: 500 });
     }
 
-    return NextResponse.json({ 
-      url: data?.url || "", 
-      diagnostics 
-    });
+    return NextResponse.json({ url: data?.url || "" });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[Registry GET] Exception occurred:", msg);
-    return NextResponse.json({ 
-      error: msg, 
-      diagnostics: {
-        SUPABASE_URL_configured: !!supabaseUrl,
-        SUPABASE_SERVICE_ROLE_KEY_configured: !!supabaseServiceKey,
-        SECRET_REGISTRY_KEY_configured: !!registrySecret
-      } 
-    }, { status: 500 });
+    return NextResponse.json({ error: "Registry unavailable" }, { status: 500 });
   }
 }
 
@@ -77,10 +57,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing backend url parameters" }, { status: 400 });
     }
 
-    // Authenticate the request using the secret shared token
-    if (registrySecret && secret !== registrySecret) {
-      console.warn("[Registry POST] Unauthorized registry attempt with secret:", secret);
-      return NextResponse.json({ error: "Unauthorized registry request key mismatch" }, { status: 401 });
+    // Reject when secret env var is unset (prevents unauthenticated writes)
+    // or when the provided secret doesn't match.
+    if (!registrySecret || secret !== registrySecret) {
+      console.warn("[Registry POST] Unauthorized registry attempt.");
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const supabase = getSupabaseClient();
@@ -99,7 +80,7 @@ export async function POST(req: Request) {
 
     if (error) {
       console.error("[Registry POST] Database upsert failed:", error.message);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ error: "Registry update failed" }, { status: 500 });
     }
 
     console.log("[Registry POST] Successfully updated active Gradio link to:", url);
@@ -107,6 +88,6 @@ export async function POST(req: Request) {
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[Registry POST] Exception occurred:", msg);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return NextResponse.json({ error: "Registry update failed" }, { status: 500 });
   }
 }
