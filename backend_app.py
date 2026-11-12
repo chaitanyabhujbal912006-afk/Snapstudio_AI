@@ -124,7 +124,8 @@ def _b64_to_pil(data_uri: str) -> Image.Image:
 def _pil_to_b64(img: Image.Image, fmt: str = "PNG") -> str:
     buf = io.BytesIO()
     img.save(buf, format=fmt, optimize=True)
-    return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
+    mime = "jpeg" if fmt.upper() == "JPEG" else fmt.lower()
+    return f"data:image/{mime};base64," + base64.b64encode(buf.getvalue()).decode()
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
