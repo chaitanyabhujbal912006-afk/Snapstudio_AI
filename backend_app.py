@@ -448,7 +448,8 @@ def api_style_filter(
             result = dip_style_transfer(img, style=style_name)
             return {"success": True, "image": _pil_to_b64(result)}
         except Exception as dip_e:
-            return {"success": False, "error": f"{e} (DIP Fallback error: {dip_e})"}
+            traceback.print_exc()
+            return {"success": False, "error": "Style filter failed (GPU and DIP fallback both failed). Please try again."}
 
 
 def api_remove_object(
