@@ -496,11 +496,11 @@ def api_outpaint(
     except Exception as e:
         try:
             img = _b64_to_pil(image_b64).convert("RGB")
-            result = dip_inpaint(img, mask)
+            result = dip_outpaint(img, direction=direction, amount=amount)
             return {"success": True, "image": _pil_to_b64(result)}
         except Exception as dip_e:
             traceback.print_exc()
-            return {"success": False, "error": "Remove object failed (GPU and DIP fallback both failed). Please try again."}
+            return {"success": False, "error": "Outpaint failed (GPU and DIP fallback both failed). Please try again."}
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
