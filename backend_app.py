@@ -393,7 +393,7 @@ def api_bg_swap(
         else:
             style = STYLES.get(style_name)
             if not style:
-                return {"success": False, "error": f"Unknown style: {style_name}"}
+        return {"success": False, "error": "Unknown style: please check your selection"}
             prompt = style["prompt"]
             neg_prompt = style["negative_prompt"]
 
