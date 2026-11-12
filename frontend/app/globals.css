@@ -1,14 +1,14 @@
-@import url('https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Space+Grotesk:wght@300..700&family=Space+Mono:wght@400;700&display=swap');
 @import "tailwindcss";
 
 /* ─── Design Tokens ─────────────────────────────────────────────────────────── */
 :root {
   /* Core backgrounds (Warm Charcoal — visible contrast between layers) */
-  --bg-void:      #111115;
-  --bg-base:      #18181d;
-  --bg-surface:   #222228;
-  --bg-raised:    #2a2a32;
-  --bg-floating:  #31313c;
+  --bg-void:      #0a0a0f;
+  --bg-base:      #111116;
+  --bg-surface:   #1a1a21;
+  --bg-raised:    #21212a;
+  --bg-floating:  #2a2a34;
 
   /* Accent — Warm Amber/Gold Studio */
   --amber:        #d97706; /* Solid Amber */
@@ -16,15 +16,18 @@
   --amber-dim:    #78350f; /* Deep Bronze */
   --amber-glow:   rgba(217, 119, 6, 0.16);
   --amber-muted:  rgba(217, 119, 6, 0.06);
+  --amber-gradient: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
 
   /* Secondary accent — Electric Cyan */
-  --cyan:         #0891b2;
-  --cyan-dim:     rgba(8, 145, 178, 0.12);
+  --cyan:         #06b6d4;
+  --cyan-dim:     rgba(6, 182, 212, 0.12);
+  --cyan-glow:    rgba(6, 182, 212, 0.08);
 
   /* Borders */
-  --border-subtle:  rgba(255,255,255,0.09);
-  --border-medium:  rgba(255,255,255,0.17);
-  --border-accent:  rgba(217,119,6,0.30);
+  --border-subtle:  rgba(255,255,255,0.06);
+  --border-medium:  rgba(255,255,255,0.12);
+  --border-accent:  rgba(217,119,6,0.25);
+  --border-glow:    rgba(245,158,11,0.15);
 
   /* Text (Apple Neutral Palette) */
   --text-primary:   #f5f5f7;
