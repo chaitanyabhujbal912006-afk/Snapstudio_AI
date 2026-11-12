@@ -6,9 +6,33 @@ export const dynamic = "force-dynamic"; // never cache proxy responses
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
+/**
+ * Allowed target URL patterns for the proxy.
+ * Only *.gradio.live and localhost/127.0.0.1 (for local dev) are permitted.
+ * This prevents the proxy being used as an open SSRF relay.
+ */
+const ALLOWED_TARGET_PATTERNS: RegExp[] = [
+  /^https:\/\/[a-z0-9-]+\.gradio\.live(\/.*)?$/i,
+  /^http:\/\/127\.0\.0\.1(:\d+)?(\/.*)?$/,
+  /^http:\/\/localhost(:\d+)?(\/.*)?$/,
+];
+
+function isAllowedTarget(url: string): boolean {
+  return ALLOWED_TARGET_PATTERNS.some((pattern) => pattern.test(url));
+}
+
+/**
+ * Restrict CORS to the app's own origin.
+ * NEXT_PUBLIC_APP_URL should be set to the production Vercel URL, e.g.
+ * "https://snapstudio-ai.vercel.app". Falls back to "*" only in dev
+ * (when NODE_ENV !== "production") to keep local testing working.
+ */
 function corsHeaders() {
+  const origin =
+    process.env.NEXT_PUBLIC_APP_URL ??
+    (process.env.NODE_ENV !== "production" ? "*" : "");
   return {
-    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, x-target-url",
   };
@@ -28,6 +52,15 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: "Missing x-target-url header" },
         { status: 400, headers: corsHeaders() }
+      );
+    }
+
+    // SSRF guard — only allow *.gradio.live and localhost targets
+    if (!isAllowedTarget(targetUrl)) {
+      console.warn("[proxy POST] Blocked disallowed target:", targetUrl);
+      return NextResponse.json(
+        { error: "Target URL not allowed" },
+        { status: 403, headers: corsHeaders() }
       );
     }
 
@@ -91,6 +124,15 @@ export async function GET(request: Request) {
       return NextResponse.json(
         { error: "Missing x-target-url header" },
         { status: 400, headers: corsHeaders() }
+      );
+    }
+
+    // SSRF guard — only allow *.gradio.live and localhost targets
+    if (!isAllowedTarget(targetUrl)) {
+      console.warn("[proxy GET] Blocked disallowed target:", targetUrl);
+      return NextResponse.json(
+        { error: "Target URL not allowed" },
+        { status: 403, headers: corsHeaders() }
       );
     }
 
