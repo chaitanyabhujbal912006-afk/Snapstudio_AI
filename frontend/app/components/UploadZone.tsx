@@ -4,20 +4,12 @@ import { useCallback, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Upload, ImageIcon } from "lucide-react";
 import { useDropzone } from "react-dropzone";
+import { compressAndResizeImage } from "@/app/lib/api";
 
 interface UploadZoneProps {
   onFile: (file: File, b64: string) => void;
   preview?: string | null;
   label?: string;
-}
-
-function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
 }
 
 export default function UploadZone({ onFile, preview, label = "Drop your photo here" }: UploadZoneProps) {
@@ -27,7 +19,8 @@ export default function UploadZone({ onFile, preview, label = "Drop your photo h
     async (files: File[]) => {
       const file = files[0];
       if (!file) return;
-      const b64 = await fileToBase64(file);
+      // Always compress & resize before passing up — prevents Vercel 413 on raw 4K+ images
+      const b64 = await compressAndResizeImage(file, 1920, 0.90);
       onFile(file, b64);
       setIsDragging(false);
     },
