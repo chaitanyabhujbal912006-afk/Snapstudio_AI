@@ -27,6 +27,28 @@ export const metadata: Metadata = {
   description:
     "Transform any photo with 13 professional AI engines. Auto-enhance, swap backgrounds, apply art styles, upscale 4×, or remove objects — all powered by free Kaggle GPU.",
   keywords: ["AI photo editor", "background swap", "style filter", "object removal", "auto enhance", "AI studio", "photo transformation"],
+  openGraph: {
+    title: "SnapStudio AI — Professional AI Photo Studio",
+    description:
+      "Transform any photo with 13 professional AI engines. Auto-enhance, swap backgrounds, apply art styles, upscale 4×, or remove objects — all powered by free Kaggle GPU.",
+    type: "website",
+    locale: "en_US",
+    images: [
+      {
+        url: "/opengraph-image.png",
+        width: 1200,
+        height: 630,
+        alt: "SnapStudio AI — Professional AI Photo Studio",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "SnapStudio AI — Professional AI Photo Studio",
+    description:
+      "Transform any photo with 13 professional AI engines. Auto-enhance, swap backgrounds, apply art styles, upscale 4×, or remove objects — all powered by free Kaggle GPU.",
+    images: ["/opengraph-image.png"],
+  },
 };
 
 export default function RootLayout({
