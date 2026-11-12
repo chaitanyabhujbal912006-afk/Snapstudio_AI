@@ -310,7 +310,8 @@ def api_face_enhance(
             result = dip_face_enhance(img)
             return {"success": True, "image": _pil_to_b64(result)}
         except Exception as dip_e:
-            return {"success": False, "error": f"{e} (DIP Fallback error: {dip_e})"}
+            traceback.print_exc()
+            return {"success": False, "error": "Face enhancement failed (GPU and DIP fallback both failed). Please try again."}
 
 
 def api_bg_blur(
@@ -332,7 +333,8 @@ def api_bg_blur(
             result = dip_bg_blur(img, blur_amount=blur_amount)
             return {"success": True, "image": _pil_to_b64(result)}
         except Exception as dip_e:
-            return {"success": False, "error": f"{e} (DIP Fallback error: {dip_e})"}
+            traceback.print_exc()
+            return {"success": False, "error": "Background blur failed (GPU and DIP fallback both failed). Please try again."}
 
 
 def api_relight(
