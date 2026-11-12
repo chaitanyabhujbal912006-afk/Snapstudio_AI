@@ -531,7 +531,8 @@ def api_text2img(
         )
         return {"success": True, "images": [_pil_to_b64(img) for img in images]}
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        traceback.print_exc()
+        return {"success": False, "error": "Text-to-image failed. Please try again."}
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
